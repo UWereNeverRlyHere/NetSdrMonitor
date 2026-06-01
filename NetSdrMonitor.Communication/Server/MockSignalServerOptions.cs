@@ -7,18 +7,28 @@ namespace NetSdrMonitor.Communication.Server;
 /// </summary>
 public sealed record MockSignalServerOptions
 {
-    /// <summary>Пауза між сигналами, коли приймач у стані Run.</summary>
+    /// <summary>
+    /// Пауза між сигналами, коли приймач у стані Run.
+    /// </summary>
     public TimeSpan SendInterval { get; init; } = TimeSpan.FromMilliseconds(200);
 
-    /// <summary>Імовірність підмішати кадр Data Item з тілом неправильного розміру (парсер має відхилити).</summary>
+    /// <summary>
+    /// Імовірність підмішати кадр Data Item з тілом неправильного розміру (парсер має відхилити).
+    /// </summary>
     public double MalformedFrameProbability { get; init; }
 
-    /// <summary>Імовірність надіслати непідтримуваний Control Item (монітор має відповісти NAK).</summary>
+    /// <summary>
+    /// Імовірність надіслати непідтримуваний Control Item (монітор має відповісти NAK).
+    /// </summary>
     public double UnknownControlProbability { get; init; }
 
-    /// <summary>Імовірність імітувати обрив з'єднання на черговому такті.</summary>
+    /// <summary>
+    /// Імовірність імітувати обрив з'єднання на черговому такті.
+    /// </summary>
     public double DropProbability { get; init; }
 
-    /// <summary>Сід для «хаос»-генератора рішень; null — недетерміновано.</summary>
+    /// <summary>
+    /// Сід для «хаос»-генератора рішень; null — недетерміновано.
+    /// </summary>
     public int? ChaosSeed { get; init; }
 }
