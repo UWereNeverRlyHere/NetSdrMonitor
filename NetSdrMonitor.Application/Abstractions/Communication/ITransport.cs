@@ -14,15 +14,22 @@ public interface ITransport : IAsyncDisposable
     bool IsConnected { get; }
 
     /// <summary>
-    /// Встановлює з'єднання з таргетом.
+    /// Встановлює з'єднання з таргетом (перше підключення).
     /// </summary>
-    Task ConnectAsync(CancellationToken cancellationToken = default);
+    Task ConnectAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Перевстановлює з'єднання: скидає поточне (якщо є) і піднімає нове.
+    /// Механіка залежна від транспорту (TCP: новий сокет; serial: переоткриття порту), тож живе тут,
+    /// а не в оркестраторі — той лише вирішує, КОЛИ рестартувати (простій/обрив), не знаючи ЯК.
+    /// </summary>
+    Task RestartAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Читає наступну порцію байтів. Повертає весь накопичений буфер (може бути з кількох сегментів);
     /// порожній результат означає, що пір закрив з'єднання.
     /// </summary>
-    Task<ReadOnlySequence<byte>> ReceiveAsync(CancellationToken cancellationToken = default);
+    Task<ReadOnlySequence<byte>> ReceiveAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Повідомляє транспорт про прогрес обробки буфера:
@@ -35,5 +42,5 @@ public interface ITransport : IAsyncDisposable
     /// <summary>
     /// Надсилає байти таргету (команди Run/Stop, ACK/NAK тощо).
     /// </summary>
-    Task SendAsync(ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default);
+    Task SendAsync(ReadOnlyMemory<byte> bytes, CancellationToken ct = default);
 }

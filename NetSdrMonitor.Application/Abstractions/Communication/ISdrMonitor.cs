@@ -7,12 +7,17 @@ namespace NetSdrMonitor.Application.Abstractions.Communication;
 /// віддає потік розібраних сигналів і рулить життєвим циклом з'єднання.
 /// Це єдиний порт, з яким працює решта застосунку — про транспорт/протокол вона не знає.
 /// </summary>
-public interface ISdrMonitor : IAsyncDisposable
+public interface  ISdrMonitor : IAsyncDisposable
 {
     /// <summary>
     /// Чи активне з'єднання й триває прийом сигналів.
     /// </summary>
     bool IsRunning { get; }
+
+    /// <summary>
+    /// Поточний стан лінії (для UI): Disconnected/Connecting/Connected/Reconnecting.
+    /// </summary>
+    ConnectionStatus Status { get; }
 
     /// <summary>
     /// Підключається до таргета й надсилає команду Run, щоб почати потік даних.

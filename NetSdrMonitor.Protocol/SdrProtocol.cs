@@ -5,6 +5,12 @@ using NetSdrMonitor.Protocol.Messages;
 
 namespace NetSdrMonitor.Protocol;
 
+public readonly record struct SdrAnalyzeContext
+{
+   public required MessageStatus Status { get; init; }
+   public SdrMessageHeader Header { get; init; }
+}
+
 /// <summary>
 /// Реалізація правил NetSDR: framing (коли повідомлення зібралось), складання готового
 /// <see cref="SdrMessage"/> з байтів і визначення відповіді (ACK/NAK). Сигналів не торкається.
@@ -18,34 +24,33 @@ public sealed class SdrProtocol : ISdrProtocol
     private const byte StopByte = 0x01;
 
     /// <inheritdoc />
-    public MessageStatus Analyze(ReadOnlySequence<byte> buffer)
+    public SdrAnalyzeContext Analyze(ReadOnlySequence<byte> buffer)
     {
         // ще немає навіть заголовка
         if (buffer.Length < SdrMessageHeader.Size)
-            return MessageStatus.Incomplete;
+            return new() { Status = MessageStatus.Incomplete };
 
         SdrMessageHeader header = ReadHeader(buffer);
 
         // довжина менша за сам заголовок — структурно неможливо
         if (header.Length < SdrMessageHeader.Size)
-            return MessageStatus.Corrupt;
+            return new() { Status = MessageStatus.Corrupt, Header = header};
 
         // цілий кадр ще не прийшов
         if (buffer.Length < header.Length)
-            return MessageStatus.Incomplete;
+           return new() { Status = MessageStatus.Incomplete, Header = header};
 
-        return MessageStatus.Ready;
+        return new(){Status = MessageStatus.Ready, Header = header};
     }
 
     /// <inheritdoc />
-    public SdrMessage Extract(ReadOnlySequence<byte> buffer)
+    public SdrMessage Extract(SdrAnalyzeContext context,ReadOnlySequence<byte> buffer)
     {
         // передумова: цілий кадр уже в буфері (Analyze == Ready). Порушення — баг викликача.
-        if (Analyze(buffer) != MessageStatus.Ready)
-            throw new InvalidOperationException("Extract викликано без статусу Ready від Analyze.");
+        if (context.Status != MessageStatus.Ready || context.Header.Length == 0)
+            throw new InvalidOperationException("Extract викликано без статусу Ready.");
 
-        SdrMessageHeader header = ReadHeader(buffer);
-
+        SdrMessageHeader header = context.Header;
         // копіюємо рівно один кадр у власний масив — далі зріз буфера можна звільняти
         byte[] raw = buffer.Slice(0, header.Length).ToArray();
 
@@ -66,11 +71,17 @@ public sealed class SdrProtocol : ISdrProtocol
         if (message.Header.Type is >= SdrMessageType.DataItem0 and <= SdrMessageType.DataItem3)
         {
             byte channel = message.Header.Type - SdrMessageType.DataItem0;
-            return CreateAck(channel);
+            // Якщо протокол потребуватиме чіткого ACK на ці поля...
+            return null;
+            //return CreateAck(channel);
         }
 
-        // на непідтримуваний Control Item — NAK (підтримуємо лише Receiver State)
-        if (IsControlItem(message.Header.Type) && message.ControlCode != ControlItemCode.ReceiverState)
+        // NAK лише на справжній Control Item з кодом (Set/Request), якого не підтримуємо.
+        // Повідомлення без коду (зокрема сам NAK) не неквируємо — інакше дві сторони
+        // зациклились би у відповідях NAK-на-NAK.
+        if (IsControlItem(message.Header.Type)
+            && message.ControlCode is { } code
+            && code != ControlItemCode.ReceiverState)
             return CreateNak();
 
         return null;
@@ -83,10 +94,43 @@ public sealed class SdrProtocol : ISdrProtocol
 
         // тіло Set Control Item: [code(2)] + [канал/тип][run/stop][режим][N]
         ReadOnlySpan<byte> parameters = [0x00, runStop, 0x00, 0x00];
-        return BuildControlItem(SdrMessageType.SetControlItem, ControlItemCode.ReceiverState, parameters);
+
+        var type = SdrMessageType.SetControlItem;
+        var code = ControlItemCode.ReceiverState;
+        
+        int payloadLength = ControlCodeSize + parameters.Length;
+        SdrMessageHeader header = SdrMessageHeader.FromPayload(type, payloadLength);
+
+        var raw = new byte[header.Length];
+        header.WriteTo(raw);
+        Span<byte> body = raw.AsSpan(SdrMessageHeader.Size);
+        BinaryPrimitives.WriteUInt16LittleEndian(body, (ushort)code);
+        parameters.CopyTo(body[ControlCodeSize..]);
+
+        return new SdrMessage { Header = header, Raw = raw, ControlCode = code };
     }
 
-    // --- приватна кухня ---
+    /// <inheritdoc />
+    public bool TryGetReceiverState(SdrMessage message, out ReceiverState state)
+    {
+        state = default;
+
+        if (!IsControlItem(message.Header.Type) || message.ControlCode != ControlItemCode.ReceiverState)
+            return false;
+
+        // тіло: [code(2)][канал][run/stop][...]; байт run/stop іде третім після коду
+        const int runStopOffset = ControlCodeSize + 1;
+        ReadOnlySpan<byte> body = message.Payload.Span;
+        if (body.Length <= runStopOffset)
+            return false;
+
+        switch (body[runStopOffset])
+        {
+            case RunByte:  state = ReceiverState.Running; return true;
+            case StopByte: state = ReceiverState.Stopped; return true;
+            default:       return false;
+        }
+    }
 
     private static SdrMessageHeader ReadHeader(ReadOnlySequence<byte> buffer)
     {
@@ -105,27 +149,12 @@ public sealed class SdrProtocol : ISdrProtocol
         return (ControlItemCode)code;
     }
 
-    // Control Item-и — це типи host→target / target→host зі значенням 0..2
-    private static bool IsControlItem(SdrMessageType type) =>
-        type <= SdrMessageType.RequestControlItemRange;
-
-    private static SdrMessage BuildControlItem(SdrMessageType type, ControlItemCode code, ReadOnlySpan<byte> parameters)
-    {
-        int payloadLength = ControlCodeSize + parameters.Length;
-        SdrMessageHeader header = SdrMessageHeader.FromPayload(type, payloadLength);
-
-        var raw = new byte[header.Length];
-        header.WriteTo(raw);
-        Span<byte> body = raw.AsSpan(SdrMessageHeader.Size);
-        BinaryPrimitives.WriteUInt16LittleEndian(body, (ushort)code);
-        parameters.CopyTo(body[ControlCodeSize..]);
-
-        return new SdrMessage { Header = header, Raw = raw, ControlCode = code };
-    }
-
+    // Control Item-и - це типи host→target / target -> host зі значенням 0..2
+    private static bool IsControlItem(SdrMessageType type) => type <= SdrMessageType.RequestControlItemRange;
+    
     private static SdrMessage CreateNak()
     {
-        // NAK — заголовок довжини 2 без тіла (тип 0). WriteTo дає байти [02][00].
+        // NAK - заголовок довжини 2 без тіла (тип 0). WriteTo дає байти [02][00].
         SdrMessageHeader header = SdrMessageHeader.FromPayload(SdrMessageType.SetControlItem, 0);
         var raw = new byte[header.Length];
         header.WriteTo(raw);
@@ -134,7 +163,7 @@ public sealed class SdrProtocol : ISdrProtocol
 
     private static SdrMessage CreateAck(byte dataItemChannel)
     {
-        // ACK Data Item — заголовок (тип DataItemAck, довжина 3) + 1 байт номера каналу.
+        // ACK Data Item - заголовок (тип DataItemAck, довжина 3) + 1 байт номера каналу.
         SdrMessageHeader header = SdrMessageHeader.FromPayload(SdrMessageType.DataItemAck, 1);
         var raw = new byte[header.Length];
         header.WriteTo(raw);

@@ -18,4 +18,11 @@
         <Using Include="Xunit"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- тестуємо ядро: домен (Signal), протокол (parser/framing) і генератор сигналів із Communication -->
+        <ProjectReference Include="..\NetSdrMonitor.Domain\NetSdrMonitor.Domain.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Protocol\NetSdrMonitor.Protocol.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Communication\NetSdrMonitor.Communication.csproj" />
+    </ItemGroup>
+
 </Project>
