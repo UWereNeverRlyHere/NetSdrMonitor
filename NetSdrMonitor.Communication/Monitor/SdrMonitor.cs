@@ -22,7 +22,6 @@ public sealed class SdrMonitor : ISdrMonitor
    private readonly ITransportFactory _transportFactory;
    private readonly SdrMonitorOptions _options;
 
-   // протокол і парсер — єдина реалізація, без стану й залежностей: створюємо самі, не інжектимо
    private readonly ISdrProtocol _protocol = new SdrProtocol();
    private readonly ISdrMessageParser _parser = new SdrMessageParser();
 
@@ -31,7 +30,11 @@ public sealed class SdrMonitor : ISdrMonitor
 
    // канал розв'язує виробника (петля) і споживача (агрегатор/UI): пишемо в одному темпі, читаємо в іншому
    private readonly Channel<Signal> _channel = Channel.CreateUnbounded<Signal>(
-         new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+         new UnboundedChannelOptions
+         {
+               SingleReader = true,
+               SingleWriter = true
+         });
 
    private readonly Lock _sync = new(); // серіалізує перемикання життєвого циклу (Start/Stop/Dispose)
 
@@ -89,9 +92,9 @@ public sealed class SdrMonitor : ISdrMonitor
          return;
       }
 
-      await TrySendStopAsync();    // ввічливо просимо таргет зупинити приймач, поки сокет ще живий
+      await TrySendStopAsync(); //  просимо таргет зупинити приймач, поки сокет ще живий
       if (cts is not null)
-         await cts.CancelAsync();  // обриваємо петлю: connect-backoff чи receive-loop вийдуть як Cancelled
+         await cts.CancelAsync(); // обриваємо петлю: connect-backoff чи receive-loop вийдуть як Cancelled
 
       try
       {
@@ -125,7 +128,7 @@ public sealed class SdrMonitor : ISdrMonitor
          await disposableFactory.DisposeAsync();
    }
 
-   // Серце життєвого циклу: вся історія «підключитись → приймати → перепідключитись» в одному місці.
+   // Серце життєвого циклу: вся історія «підключитись → приймати → перепідключитись».
    private async Task RunLoopAsync(CancellationToken ct)
    {
       bool everConnected = false;
@@ -135,13 +138,12 @@ public sealed class SdrMonitor : ISdrMonitor
 
          while (!ct.IsCancellationRequested)
          {
-            // підключення з backoff: перший раз і після обриву — той самий шлях, різниця лише в ярлику статусу
             SetStatus(everConnected ? ConnectionStatus.Reconnecting : ConnectionStatus.Connecting);
             while (true)
             {
                try
                {
-                  await ConnectWithTimeoutAsync(ct);           // завжди RestartAsync: tear down + establish
+                  await ConnectWithTimeoutAsync(ct);           // завжди RestartAsync
                   await _transport.SendAsync(_runCommand, ct); // новому з'єднанню знову потрібен Run
                   break;
                }
@@ -152,7 +154,7 @@ public sealed class SdrMonitor : ISdrMonitor
                catch (Exception ex) when (ex is SocketException or TimeoutException or IOException)
                {
                   _logger.LogWarning("Connect failed ({Error}); retry in {Delay}s",
-                        ex.Message, _options.ReconnectDelay.TotalSeconds);
+                                     ex.Message, _options.ReconnectDelay.TotalSeconds);
                   try
                   {
                      await Task.Delay(_options.ReconnectDelay, ct);
