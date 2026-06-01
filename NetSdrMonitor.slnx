@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Tests/">
+    <Project Path="NetSdrMonitor.IntegrationTests/NetSdrMonitor.IntegrationTests.csproj" />
+    <Project Path="NetSdrMonitor.UnitTests/NetSdrMonitor.UnitTests.csproj" />
+  </Folder>
+  <Project Path="NetSdrMonitor.Application/NetSdrMonitor.Application.csproj" />
+  <Project Path="NetSdrMonitor.Communication/NetSdrMonitor.Communication.csproj" />
+  <Project Path="NetSdrMonitor.Desktop/NetSdrMonitor.Desktop.csproj" />
+  <Project Path="NetSdrMonitor.Domain/NetSdrMonitor.Domain.csproj" />
+  <Project Path="NetSdrMonitor.Infrastructure/NetSdrMonitor.Infrastructure.csproj" />
+  <Project Path="NetSdrMonitor.Protocol/NetSdrMonitor.Protocol.csproj" />
+</Solution>

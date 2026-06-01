@@ -1,0 +1,154 @@
+## ============================================================
+##  .gitignore — .NET / WPF solution (Rider, Visual Studio, VS Code, MSBuild, CLI)
+##  Покриває: вихід збірки, файли IDE, кеші, тести, публікації, секрети.
+## ============================================================
+
+# ---- Результати збірки ----
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]uild/
+[Bb]uilds/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+
+# ---- .NET / MSBuild ----
+project.lock.json
+project.fragment.lock.json
+*.binlog
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+msbuild.log
+msbuild.err
+msbuild.wrn
+.msbuild/
+
+# ---- NuGet ----
+*.nuget.dgspec.json
+.nuget/
+nuget.config.user
+
+# ---- Visual Studio ----
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# ---- JetBrains Rider / ReSharper ----
+.idea/
+*.sln.iml
+*.iml
+.idea.*/
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+*.resharper
+riderModule.iml
+/_ReSharper.Caches/
+
+# ---- VS Code ----
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+
+# ---- Test / coverage ----
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+[Cc]overage*/
+.sonarqube/
+
+# ---- Publish / deploy ----
+publish/
+[Pp]ublish[Pp]rofiles/*.pubxml.user
+*.azurePubxml
+*.[Pp]ublish.xml
+PublishScripts/
+*.appx
+*.appxbundle
+*.appxupload
+
+# ---- ASP.NET / runtime artifacts (про всяк випадок) ----
+**/wwwroot/lib/
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+
+# ---- SQLite (локальні БД проєкту; тримаємо схему/код, не дампи) ----
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ---- Secrets / local config ----
+appsettings.*.local.json
+secrets.json
+*.local.user
+.env
+.env.*
+
+# ---- OS noise ----
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*~
+*.bak
+*.swp
