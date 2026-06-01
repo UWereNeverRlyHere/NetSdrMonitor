@@ -83,8 +83,17 @@ public sealed class TcpClientTransport(string host, int port) : ITransport
       var client = new TcpClient
       {
             NoDelay = true
-      };                                           // NoDelay: дрібні кадри без затримки Нейгла
-      await client.ConnectAsync(_host, _port, ct); // одна спроба; кине SocketException при невдачі
+      }; // NoDelay: дрібні кадри без затримки Нейгла
+      try
+      {
+         await client.ConnectAsync(_host, _port, ct); // одна спроба; кине SocketException при невдачі
+      }
+      catch
+      {
+         client.Dispose(); // невдалу спробу прибираємо одразу — інакше при ретраях течуть напіввідкриті сокети
+         throw;
+      }
+
       _client    = client;
       _stream    = client.GetStream();
       _reader    = PipeReader.Create(_stream);

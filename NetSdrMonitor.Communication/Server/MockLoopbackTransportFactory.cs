@@ -16,6 +16,7 @@ public sealed class MockLoopbackTransportFactory(MockSignalServer mock) : ITrans
 
     private int   _port;
     private Task? _serverLoop;
+    private bool  _disposed;
 
     public ITransport Create()
     {
@@ -25,6 +26,14 @@ public sealed class MockLoopbackTransportFactory(MockSignalServer mock) : ITrans
 
     public async ValueTask DisposeAsync()
     {
+        lock (_gate)
+        {
+            if (_disposed) // монітор і DI можуть звільнити фабрику обидва — гасимо один раз
+                return;
+
+            _disposed = true;
+        }
+
         await _cts.CancelAsync();
         if (_serverLoop is not null)
         {

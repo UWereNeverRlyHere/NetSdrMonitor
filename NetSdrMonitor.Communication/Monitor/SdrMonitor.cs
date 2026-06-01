@@ -1,6 +1,7 @@
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using NetSdrMonitor.Application.Abstractions.Communication;
 using NetSdrMonitor.Domain.Signals;
@@ -10,240 +11,333 @@ using NetSdrMonitor.Protocol.Messages;
 namespace NetSdrMonitor.Communication.Monitor;
 
 /// <summary>
-/// Монітор лінії NetSDR — основна реалізація застосунку. Створює транспорт через фабрику й зводить
-/// його (байти) з протоколом (framing/відповіді) та парсером (повідомлення-сигнал), віддаючи назовні
-/// чистий потік <see cref="Signal"/>. Сам вирішує, КОЛИ перепідключитись (простій/обрив), делегуючи
-/// транспорту, ЯК саме (<see cref="ITransport.RestartAsync"/>). Єдине місце технічних логів цієї лінії.
+/// Монітор лінії NetSDR — основна реалізація застосунку. Сам володіє фоновою петлею з'єднання:
+/// Start запускає її, Stop гасить. Перше підключення й відновлення після обриву — один шлях із backoff.
+/// Поточний стан віддає назовні через <see cref="Status"/> і подію <see cref="StatusChanged"/>,
+/// а розібрані сигнали — через канал (<see cref="Signals"/>). Єдине місце технічних логів цієї лінії.
 /// </summary>
 public sealed class SdrMonitor : ISdrMonitor
 {
-    private readonly ILogger<SdrMonitor> _logger;
-    private readonly ITransportFactory   _transportFactory;
-    private readonly SdrMonitorOptions   _options;
+   private readonly ILogger<SdrMonitor> _logger;
+   private readonly ITransportFactory _transportFactory;
+   private readonly SdrMonitorOptions _options;
 
-    // протокол і парсер — єдина реалізація, без стану й залежностей: створюємо самі, не інжектимо
-    private readonly ISdrProtocol      _protocol = new SdrProtocol();
-    private readonly ISdrMessageParser _parser   = new SdrMessageParser();
+   // протокол і парсер — єдина реалізація, без стану й залежностей: створюємо самі, не інжектимо
+   private readonly ISdrProtocol _protocol = new SdrProtocol();
+   private readonly ISdrMessageParser _parser = new SdrMessageParser();
 
-    private readonly ReadOnlyMemory<byte> _runCommand;
-    private readonly ReadOnlyMemory<byte> _stopCommand;
+   private readonly ReadOnlyMemory<byte> _runCommand;
+   private readonly ReadOnlyMemory<byte> _stopCommand;
 
-    private ITransport? _transport;
+   // канал розв'язує виробника (петля) і споживача (агрегатор/UI): пишемо в одному темпі, читаємо в іншому
+   private readonly Channel<Signal> _channel = Channel.CreateUnbounded<Signal>(
+         new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
-    public SdrMonitor(ILogger<SdrMonitor> logger, ITransportFactory transportFactory, SdrMonitorOptions? options = null)
-    {
-        _logger = logger;
-        _transportFactory = transportFactory;
-        _options = options ?? new SdrMonitorOptions();
+   private readonly Lock _sync = new(); // серіалізує перемикання життєвого циклу (Start/Stop/Dispose)
 
-        // команди Run/Stop незмінні — збираємо байти один раз
-        _runCommand  = _protocol.CreateReceiverStateMessage(ReceiverState.Running).Raw;
-        _stopCommand = _protocol.CreateReceiverStateMessage(ReceiverState.Stopped).Raw;
-    }
+   private volatile ConnectionStatus _status = ConnectionStatus.Disconnected;
 
-    public bool IsRunning { get; private set; }
+   private ITransport? _transport;
+   private CancellationTokenSource? _lifetimeCts;
+   private Task? _loopTask;
 
-    public ConnectionStatus Status { get; private set; } = ConnectionStatus.Disconnected;
+   public SdrMonitor(
+         ILogger<SdrMonitor> logger,
+         ITransportFactory   transportFactory,
+         SdrMonitorOptions?  options = null)
+   {
+      _logger           = logger;
+      _transportFactory = transportFactory;
+      _options          = options ?? new SdrMonitorOptions();
 
-    public async Task StartAsync(CancellationToken cancellationToken = default)
-    {
-        _transport = _transportFactory.Create();
-        Status = ConnectionStatus.Connecting;
+      // команди Run/Stop незмінні — збираємо байти один раз
+      _runCommand  = _protocol.CreateReceiverStateMessage(ReceiverState.Running).Raw;
+      _stopCommand = _protocol.CreateReceiverStateMessage(ReceiverState.Stopped).Raw;
+   }
 
-        await ConnectWithTimeoutAsync(isRestart: false, cancellationToken); // перша спроба; кине, якщо невдало
-        await _transport.SendAsync(_runCommand, cancellationToken);
+   public event EventHandler<ConnectionStatus>? StatusChanged;
 
-        IsRunning = true;
-        Status = ConnectionStatus.Connected;
-        _logger.LogInformation("Receiver started (Run sent)");
-    }
+   public ConnectionStatus Status => _status;
 
-    public async Task StopAsync(CancellationToken cancellationToken = default)
-    {
-        IsRunning = false;
-        try
-        {
-            if (_transport is { IsConnected: true })
-                await _transport.SendAsync(_stopCommand, cancellationToken);
-        }
-        catch (Exception ex) when (ex is IOException or SocketException)
-        {
-            _logger.LogWarning(ex, "Stop send failed (already disconnected?)");
-        }
+   public IAsyncEnumerable<Signal> Signals(CancellationToken ct = default) => _channel.Reader.ReadAllAsync(ct);
 
-        _logger.LogInformation("Receiver stopped (Stop sent)");
-    }
+   public void Start()
+   {
+      lock (_sync)
+      {
+         if (_loopTask is { IsCompleted: false })
+            return; // вже працює — Start ідемпотентний
 
-    public async ValueTask DisposeAsync()
-    {
-        IsRunning = false;
-        Status = ConnectionStatus.Disconnected;
-        if (_transport is not null)
-            await _transport.DisposeAsync();
-    }
+         _lifetimeCts = new CancellationTokenSource();
+         _loopTask    = Task.Run(() => RunLoopAsync(_lifetimeCts.Token));
+      }
+   }
 
-    public async IAsyncEnumerable<Signal> ReceiveSignalsAsync([EnumeratorCancellation] CancellationToken ct = default)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            // читання/декодування ізольовані в хелпері (там try/catch); тут лише yield — інакше iterator не дозволяє
-            ReadBatch batch = await ReadBatchSafelyAsync(ct);
+   public async Task StopAsync(CancellationToken cancellationToken = default)
+   {
+      Task? loop;
+      CancellationTokenSource? cts;
+      lock (_sync)
+      {
+         loop = _loopTask;
+         cts  = _lifetimeCts;
+      }
 
-            foreach (Signal signal in batch.Signals)
-                yield return signal;
+      if (loop is null)
+      {
+         SetStatus(ConnectionStatus.Stopped);
+         return;
+      }
 
-            if (batch.Outcome == ReadOutcome.Cancelled)
-                yield break;
+      await TrySendStopAsync();    // ввічливо просимо таргет зупинити приймач, поки сокет ще живий
+      if (cts is not null)
+         await cts.CancelAsync();  // обриваємо петлю: connect-backoff чи receive-loop вийдуть як Cancelled
 
-            if (batch.Outcome != ReadOutcome.Data)
-                await ReconnectAsync(batch.Outcome, ct); // PeerClosed | Idle | Faulted
-        }
+      try
+      {
+         await loop;
+      }
+      catch
+      {
+         // петля сама гасить свої винятки; тут лише дочекатись виходу
+      }
 
-        Status = ConnectionStatus.Disconnected;
-    }
+      lock (_sync)
+      {
+         // знімаємо посилання, лише якщо ніхто не перезапустив петлю, поки ми чекали
+         if (ReferenceEquals(_loopTask, loop))
+         {
+            _loopTask    = null;
+            _lifetimeCts = null;
+         }
+      }
 
-    // Один цикл «прочитати порцію → розібрати всі готові кадри». Тут вся ризикована робота (await + виключення).
-    private async Task<ReadBatch> ReadBatchSafelyAsync(CancellationToken ct)
-    {
-        try
-        {
-            using var readCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            if (IsRunning)
-                readCts.CancelAfter(_options.IdleTimeout); // idle-таймер лише коли реально чекаємо дані
+      cts?.Dispose();
+   }
 
-            ReadOnlySequence<byte> buffer = await _transport!.ReceiveAsync(readCts.Token);
-            if (buffer.IsEmpty)
-                return ReadBatch.Of(ReadOutcome.PeerClosed);
+   public async ValueTask DisposeAsync()
+   {
+      await StopAsync();
+      _channel.Writer.TryComplete(); // споживач Signals() завершить свій await foreach
 
-            var signals = new List<Signal>();
-            while (!buffer.IsEmpty)
+      // у loopback-режимі фабрика володіє мок-сервером — гасимо його разом з монітором
+      if (_transportFactory is IAsyncDisposable disposableFactory)
+         await disposableFactory.DisposeAsync();
+   }
+
+   // Серце життєвого циклу: вся історія «підключитись → приймати → перепідключитись» в одному місці.
+   private async Task RunLoopAsync(CancellationToken ct)
+   {
+      bool everConnected = false;
+      try
+      {
+         _transport ??= _transportFactory.Create();
+
+         while (!ct.IsCancellationRequested)
+         {
+            // підключення з backoff: перший раз і після обриву — той самий шлях, різниця лише в ярлику статусу
+            SetStatus(everConnected ? ConnectionStatus.Reconnecting : ConnectionStatus.Connecting);
+            while (true)
             {
-                SdrAnalyzeContext context = _protocol.Analyze(buffer);
-                MessageStatus status = context.Status;
-                if (status == MessageStatus.Incomplete)
-                    break; // кадр ще не зібрався — чекаємо байтів, буфер не чіпаємо
-
-                if (status == MessageStatus.Corrupt)
-                {
-                    _logger.LogWarning("Corrupt frame, resynchronizing by 1 byte");
-                    buffer = buffer.Slice(1);
-                    continue;
-                }
-
-                HandledMessage handled = await HandleReadyAsync(context,buffer, ct);
-                buffer = buffer.Slice(handled.ConsumedLength);
-
-                if (handled.Signal is { } signal)
-                    signals.Add(signal);
+               try
+               {
+                  await ConnectWithTimeoutAsync(ct);           // завжди RestartAsync: tear down + establish
+                  await _transport.SendAsync(_runCommand, ct); // новому з'єднанню знову потрібен Run
+                  break;
+               }
+               catch (OperationCanceledException) when (ct.IsCancellationRequested)
+               {
+                  return; // зупинили під час спроби підключення
+               }
+               catch (Exception ex) when (ex is SocketException or TimeoutException or IOException)
+               {
+                  _logger.LogWarning("Connect failed ({Error}); retry in {Delay}s",
+                        ex.Message, _options.ReconnectDelay.TotalSeconds);
+                  try
+                  {
+                     await Task.Delay(_options.ReconnectDelay, ct);
+                  }
+                  catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                  {
+                     return; // зупинили під час паузи backoff — виходимо чисто, без винятку назовні
+                  }
+               }
             }
 
-            _transport.AdvanceTo(buffer.Start, buffer.End);
-            return ReadBatch.Of(signals);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            return ReadBatch.Of(ReadOutcome.Cancelled); // нас зупинили (Dispose/скасування ззовні)
-        }
-        catch (OperationCanceledException)
-        {
-            // спрацював idle-таймер; якщо за цей час нас уже зупинили — це не привід перепідключатись
-            return IsRunning ? ReadBatch.Of(ReadOutcome.Idle) : ReadBatch.Of(ReadOutcome.Data);
-        }
-        catch (Exception ex) when (ex is IOException or SocketException)
-        {
-            _logger.LogWarning(ex, "Transport read failed");
-            return ReadBatch.Of(ReadOutcome.Faulted);
-        }
-    }
+            everConnected = true;
+            SetStatus(ConnectionStatus.Connected);
+            _logger.LogInformation("Connected (Run sent)");
 
-    // Складає повідомлення, шле відповідь (якщо треба) і декодує сигнал.
-    private async Task<HandledMessage> HandleReadyAsync(SdrAnalyzeContext context, ReadOnlySequence<byte> buffer, CancellationToken ct)
-    {
-        SdrMessage message = _protocol.Extract(context, buffer);
-        _logger.LogTrace("Message read: type={Type}, length={Length}", message.Header.Type, message.Header.Length);
+            ReadOutcome outcome = await ReceiveUntilBreakAsync(ct);
+            if (outcome == ReadOutcome.Cancelled)
+               return; // нас зупинили — виходимо в Stopped
 
-        if (_protocol.GetReply(message) is { } reply)
-            await _transport!.SendAsync(reply.Raw, ct);
+            _logger.LogWarning("Connection lost ({Reason}); reconnecting", outcome);
+            // інакше (PeerClosed | Idle | Faulted) — новий виток циклу => reconnect
+         }
+      }
+      finally
+      {
+         if (_transport is not null)
+         {
+            await _transport.DisposeAsync(); // закриваємо сокет; у loopback це згортає сесію мока під цього клієнта
+            _transport = null;
+         }
 
-        Signal? signal = null;
-        if (_parser.TryToSignal(message, out Signal decoded))
-        {
-            _logger.LogDebug("Signal decoded: {FrequencyHz} Hz", decoded.FrequencyHz);
-            signal = decoded;
-        }
+         SetStatus(ct.IsCancellationRequested ? ConnectionStatus.Stopped : ConnectionStatus.Disconnected);
+      }
+   }
 
-        return new HandledMessage(message.Header.Length, signal);
-    }
+   // Приймає кадри, доки йдуть дані; повертає причину розриву (або Cancelled, якщо нас зупинили).
+   private async Task<ReadOutcome> ReceiveUntilBreakAsync(CancellationToken ct)
+   {
+      while (!ct.IsCancellationRequested)
+      {
+         ReadBatch batch = await ReadBatchSafelyAsync(ct);
 
-    // Відновлення з'єднання з backoff: монітор вирішує КОЛИ, транспорт знає ЯК (RestartAsync).
-    private async Task ReconnectAsync(ReadOutcome reason, CancellationToken ct)
-    {
-        IsRunning = false;
-        Status = ConnectionStatus.Reconnecting;
-        _logger.LogWarning("Connection lost ({Reason}); reconnecting", reason);
+         foreach (Signal signal in batch.Signals)
+            _channel.Writer.TryWrite(signal); // unbounded-канал: запис не блокує й не кидає
 
-        while (!ct.IsCancellationRequested)
-        {
-            try
+         if (batch.Outcome != ReadOutcome.Data)
+            return batch.Outcome; // PeerClosed | Idle | Faulted | Cancelled
+      }
+
+      return ReadOutcome.Cancelled;
+   }
+
+   // Один цикл «прочитати порцію → розібрати всі готові кадри». Тут вся ризикована робота (await + виключення).
+   [SuppressMessage("ReSharper", "CognitiveComplexity")]
+   private async Task<ReadBatch> ReadBatchSafelyAsync(CancellationToken ct)
+   {
+      try
+      {
+         using var readCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+         readCts.CancelAfter(_options.IdleTimeout); // тиша довша за дозволену => вважаємо пір завислим
+
+         ReadOnlySequence<byte> buffer = await _transport!.ReceiveAsync(readCts.Token);
+         if (buffer.IsEmpty)
+            return ReadBatch.Of(ReadOutcome.PeerClosed);
+
+         var signals = new List<Signal>();
+         while (!buffer.IsEmpty)
+         {
+            SdrAnalyzeContext context = _protocol.Analyze(buffer);
+            MessageStatus status = context.Status;
+            if (status == MessageStatus.Incomplete)
+               break; // кадр ще не зібрався — чекаємо байтів, буфер не чіпаємо
+
+            if (status == MessageStatus.Corrupt)
             {
-                await Task.Delay(_options.ReconnectDelay, ct);
-                await ConnectWithTimeoutAsync(isRestart: true, ct); // транспорт сам перевстановлює з'єднання
-                await _transport!.SendAsync(_runCommand, ct);        // новому з'єднанню знову потрібен Run
-
-                IsRunning = true;
-                Status = ConnectionStatus.Connected;
-                _logger.LogInformation("Reconnected");
-                return;
+               _logger.LogWarning("Corrupt frame, resynchronizing by 1 byte");
+               buffer = buffer.Slice(1);
+               continue;
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                return; // нас зупинили під час відновлення
-            }
-            catch (Exception ex) when (ex is SocketException or TimeoutException or IOException)
-            {
-                _logger.LogWarning("Reconnect failed ({Error}); retry in {Delay}s", ex.Message, _options.ReconnectDelay.TotalSeconds);
-                // лишаємось у циклі — наступна спроба після паузи
-            }
-        }
-    }
 
-    // Підключення/перепідключення під обмеженням часу: окремий токен скасовує саме спробу,
-    // не плутаючи її з користувацьким скасуванням (ct).
-    private async Task ConnectWithTimeoutAsync(bool isRestart, CancellationToken ct)
-    {
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        connectCts.CancelAfter(_options.ConnectTimeout);
-        try
-        {
-            if (isRestart)
-                await _transport!.RestartAsync(connectCts.Token);
-            else
-                await _transport!.ConnectAsync(connectCts.Token);
+            HandledMessage handled = await HandleReadyAsync(context, buffer, ct);
+            buffer = buffer.Slice(handled.ConsumedLength);
 
-            _logger.LogInformation("Transport connected");
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            throw new TimeoutException($"Підключення не вклалося в {_options.ConnectTimeout.TotalSeconds:0.#} с.");
-        }
-    }
+            if (handled.Signal is {} signal)
+               signals.Add(signal);
+         }
 
-    private readonly record struct HandledMessage(int ConsumedLength, Signal? Signal);
+         _transport.AdvanceTo(buffer.Start, buffer.End);
+         return ReadBatch.Of(signals);
+      }
+      catch (OperationCanceledException) when (ct.IsCancellationRequested)
+      {
+         return ReadBatch.Of(ReadOutcome.Cancelled); // нас зупинили (Stop/Dispose)
+      }
+      catch (OperationCanceledException)
+      {
+         return ReadBatch.Of(ReadOutcome.Idle); // спрацював idle-таймер
+      }
+      catch (Exception ex) when (ex is IOException or SocketException)
+      {
+         _logger.LogWarning(ex, "Transport read failed");
+         return ReadBatch.Of(ReadOutcome.Faulted);
+      }
+   }
 
-    private enum ReadOutcome
-    {
-        Data,       // прочитали порцію (можливо, з 0 сигналів) — читаємо далі
-        PeerClosed, // пір закрив з'єднання
-        Idle,       // тиша довша за дозволену під час Run
-        Faulted,    // помилка сокета/IO
-        Cancelled,  // нас зупинили ззовні
-    }
+   // Складає повідомлення, шле відповідь (якщо треба) і декодує сигнал.
+   private async Task<HandledMessage> HandleReadyAsync(SdrAnalyzeContext context, ReadOnlySequence<byte> buffer, CancellationToken ct)
+   {
+      SdrMessage message = _protocol.Extract(context, buffer);
+      _logger.LogTrace("Message read: type={Type}, length={Length}", message.Header.Type, message.Header.Length);
 
-    private readonly record struct ReadBatch(IReadOnlyList<Signal> Signals, ReadOutcome Outcome)
-    {
-        private static readonly IReadOnlyList<Signal> None = [];
+      if (_protocol.GetReply(message) is {} reply)
+         await _transport!.SendAsync(reply.Raw, ct);
 
-        public static ReadBatch Of(IReadOnlyList<Signal> signals) => new(signals, ReadOutcome.Data);
-        public static ReadBatch Of(ReadOutcome outcome) => new(None, outcome);
-    }
+      Signal? signal = null;
+      if (_parser.TryToSignal(message, out Signal decoded))
+      {
+         _logger.LogDebug("Signal decoded: {FrequencyHz} Hz", decoded.FrequencyHz);
+         signal = decoded;
+      }
+
+      return new HandledMessage(message.Header.Length, signal);
+   }
+
+   // Підключення під обмеженням часу: окремий токен скасовує саме спробу, не плутаючи з користувацьким скасуванням.
+   private async Task ConnectWithTimeoutAsync(CancellationToken ct)
+   {
+      using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+      connectCts.CancelAfter(_options.ConnectTimeout);
+      try
+      {
+         await _transport!.RestartAsync(connectCts.Token); // tear down + establish: годиться і для першого коннекту
+         _logger.LogInformation("Transport connected");
+      }
+      catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+      {
+         throw new TimeoutException($"Підключення не вклалося в {_options.ConnectTimeout.TotalSeconds:0.#} с.");
+      }
+   }
+
+   // Ввічлива зупинка приймача перед розривом: якщо сокет ще живий — шлемо Stop, помилки ковтаємо.
+   private async Task TrySendStopAsync()
+   {
+      try
+      {
+         if (_transport is { IsConnected: true })
+         {
+            using var sendCts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            await _transport.SendAsync(_stopCommand, sendCts.Token);
+            _logger.LogInformation("Stop sent");
+         }
+      }
+      catch (Exception ex) when (ex is IOException or SocketException or OperationCanceledException)
+      {
+         _logger.LogWarning(ex, "Stop send failed (already disconnected?)");
+      }
+   }
+
+   private void SetStatus(ConnectionStatus next)
+   {
+      if (_status == next)
+         return;
+
+      _status = next;
+      _logger.LogDebug("Status -> {Status}", next);
+      StatusChanged?.Invoke(this, next);
+   }
+
+   private readonly record struct HandledMessage(int ConsumedLength, Signal? Signal);
+
+   private enum ReadOutcome
+   {
+      Data,       // прочитали порцію (можливо, з 0 сигналів) — читаємо далі
+      PeerClosed, // пір закрив з'єднання
+      Idle,       // тиша довша за дозволену
+      Faulted,    // помилка сокета/IO
+      Cancelled,  // нас зупинили ззовні
+   }
+
+   private readonly record struct ReadBatch(IReadOnlyList<Signal> Signals, ReadOutcome Outcome)
+   {
+      private static readonly IReadOnlyList<Signal> None = [];
+
+      public static ReadBatch Of(IReadOnlyList<Signal> signals) => new(signals, ReadOutcome.Data);
+
+      public static ReadBatch Of(ReadOutcome outcome) => new(None, outcome);
+   }
 }

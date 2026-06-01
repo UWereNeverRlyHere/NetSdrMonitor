@@ -3,34 +3,37 @@ using NetSdrMonitor.Domain.Signals;
 namespace NetSdrMonitor.Application.Abstractions.Communication;
 
 /// <summary>
-/// Монітор однієї лінії NetSDR: піднімає транспорт, керує приймачем (Run/Stop),
-/// віддає потік розібраних сигналів і рулить життєвим циклом з'єднання.
+/// Монітор однієї лінії NetSDR: володіє фоновою петлею з'єднання (Start/Stop), сам підключається
+/// й відновлюється після обриву, віддає потік розібраних сигналів і повідомляє про зміни стану.
 /// Це єдиний порт, з яким працює решта застосунку — про транспорт/протокол вона не знає.
 /// </summary>
-public interface  ISdrMonitor : IAsyncDisposable
+public interface ISdrMonitor : IAsyncDisposable
 {
     /// <summary>
-    /// Чи активне з'єднання й триває прийом сигналів.
-    /// </summary>
-    bool IsRunning { get; }
-
-    /// <summary>
-    /// Поточний стан лінії (для UI): Disconnected/Connecting/Connected/Reconnecting.
+    /// Поточний стан лінії (знімок для UI).
     /// </summary>
     ConnectionStatus Status { get; }
 
     /// <summary>
-    /// Підключається до таргета й надсилає команду Run, щоб почати потік даних.
+    /// Здіймається на кожну зміну стану. Передплатник з UI маршалить у свій потік сам —
+    /// монітор UI-агностичний і нічого не знає про Dispatcher.
     /// </summary>
-    Task StartAsync(CancellationToken cancellationToken = default);
+    event EventHandler<ConnectionStatus>? StatusChanged;
 
     /// <summary>
-    /// Надсилає команду Stop і зупиняє прийом, не розриваючи транспорт.
+    /// Запускає петлю з'єднання: ставить намір і починає підключення з ретраями.
+    /// Не блокує й не кидає на невдалому коннекті — результат видно через <see cref="Status"/>.
+    /// </summary>
+    void Start();
+
+    /// <summary>
+    /// Гасить петлю: просить таргет зупинити приймач і розриває з'єднання. Після цього знову можна Start.
     /// </summary>
     Task StopAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Асинхронний потік розібраних сигналів — джерело для агрегатора/UI.
+    /// Асинхронний потік розібраних сигналів (канал) — джерело для агрегатора/UI.
+    /// Споживають один раз; потік триває крізь паузи Stop/Start і завершується на Dispose.
     /// </summary>
-    IAsyncEnumerable<Signal> ReceiveSignalsAsync(CancellationToken ct = default);
+    IAsyncEnumerable<Signal> Signals(CancellationToken ct = default);
 }

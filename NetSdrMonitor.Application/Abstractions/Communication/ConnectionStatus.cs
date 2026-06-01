@@ -24,4 +24,9 @@ public enum ConnectionStatus
    /// Зв'язок втрачено (обрив/простій), триває відновлення.
    /// </summary>
    Reconnecting,
+
+   /// <summary>
+   /// Петлю зупинено користувачем (Stop). Можна знову стартувати.
+   /// </summary>
+   Stopped,
 }
