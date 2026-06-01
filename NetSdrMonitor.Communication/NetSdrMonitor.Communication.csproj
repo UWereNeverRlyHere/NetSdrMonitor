@@ -6,4 +6,12 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+        <!-- Комунікація реалізує порти Application, говорить мовою Protocol і Domain -->
+        <ProjectReference Include="..\NetSdrMonitor.Application\NetSdrMonitor.Application.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Protocol\NetSdrMonitor.Protocol.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Domain\NetSdrMonitor.Domain.csproj" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    </ItemGroup>
+
 </Project>

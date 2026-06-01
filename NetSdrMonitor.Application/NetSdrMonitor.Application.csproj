@@ -6,4 +6,9 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+        <!-- Application бачить лише домен; порти (інтерфейси) живуть тут -->
+        <ProjectReference Include="..\NetSdrMonitor.Domain\NetSdrMonitor.Domain.csproj" />
+    </ItemGroup>
+
 </Project>
