@@ -76,6 +76,7 @@ public sealed class MockSignalServer : ISignalServer
          {
             TcpClient client = await _listener!.AcceptTcpClientAsync(cancellationToken);
             sessions.Add(ServeClientAsync(client, cancellationToken));
+            sessions.RemoveAll(static session => session.IsCompleted); // прибираємо завершені сесії, щоб список не ріс
          }
       }
       catch (OperationCanceledException)

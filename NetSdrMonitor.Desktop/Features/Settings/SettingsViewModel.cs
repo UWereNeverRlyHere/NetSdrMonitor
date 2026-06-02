@@ -19,6 +19,17 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
    [ObservableProperty] private bool   _useInMemoryStorage = source.UseInMemoryStorage;
    [ObservableProperty] private bool   _useMedianFrequency = source.UseMedianFrequency;
    [ObservableProperty] private bool   _showConsole = source.ShowConsole;
+   [ObservableProperty] private AppTheme _theme = source.Theme;
+
+   /// <summary>
+   /// Варіанти теми для випадного списку (підпис українською, значення — режим).
+   /// </summary>
+   public IReadOnlyList<ThemeChoice> ThemeOptions { get; } =
+   [
+      new() { Value = AppTheme.Light,  Display = "Світла" },
+      new() { Value = AppTheme.Dark,   Display = "Темна" },
+      new() { Value = AppTheme.System, Display = "Синхронізувати з ОС" },
+   ];
 
    /// <summary>
    /// Збирає оновлені налаштування з полів, зберігаючи решту значень джерела.
@@ -42,5 +53,6 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
          UseInMemoryStorage      = UseInMemoryStorage,
          UseMedianFrequency      = UseMedianFrequency,
          ShowConsole             = ShowConsole,
+         Theme                   = Theme,
    };
 }

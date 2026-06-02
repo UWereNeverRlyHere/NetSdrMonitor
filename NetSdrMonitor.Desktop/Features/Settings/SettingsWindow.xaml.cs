@@ -1,5 +1,6 @@
 using System.Windows;
 using NetSdrMonitor.Desktop.Settings;
+using NetSdrMonitor.Desktop.Theming;
 
 namespace NetSdrMonitor.Desktop.Features.Settings;
 
@@ -51,6 +52,7 @@ public partial class SettingsWindow : Window
    {
       AppSettings updated = _viewModel.ToSettings();
       _store.Save(updated);
+      ThemeApplier.Apply(updated.Theme); // застосовуємо тему одразу, без перезапуску
       Saved        = updated;
       DialogResult = true;
    }

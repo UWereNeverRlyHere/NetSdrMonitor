@@ -9,10 +9,10 @@ namespace NetSdrMonitor.Protocol;
 /// </summary>
 public sealed class SdrMessageParser : ISdrMessageParser
 {
-    private const int TimestampOffset = 0;   // uint64
-    private const int FrequencyOffset = 8;   // uint64
-    private const int BandwidthOffset = 16;  // uint32
-    private const int SnrOffset       = 20;  // double (8 байтів)
+    private const int TimestampOffset = 0;  // uint64
+    private const int FrequencyOffset = 8;  // uint64
+    private const int BandwidthOffset = 16; // uint32
+    private const int SnrOffset = 20;       // double (8 байтів)
     private const int SignalPayloadSize = 28;
 
     /// <inheritdoc />
@@ -25,13 +25,20 @@ public sealed class SdrMessageParser : ISdrMessageParser
             return false;
 
         ReadOnlySpan<byte> body = message.Payload.Span;
+
+        // хибне трактування байтів (порядок/тип) дає NaN/Inf — це не валідний рівень сигналу
+        double snrDb = BinaryPrimitives.ReadDoubleLittleEndian(body[SnrOffset..]);
+        if (!double.IsFinite(snrDb))
+            return false;
+
         signal = new Signal
         {
-            TimestampUnixMs = BinaryPrimitives.ReadInt64LittleEndian(body[TimestampOffset..]),
-            FrequencyHz     = BinaryPrimitives.ReadUInt64LittleEndian(body[FrequencyOffset..]),
-            BandwidthHz     = BinaryPrimitives.ReadUInt32LittleEndian(body[BandwidthOffset..]),
-            SnrDb           = BinaryPrimitives.ReadDoubleLittleEndian(body[SnrOffset..]),
+                    TimestampUnixMs = BinaryPrimitives.ReadInt64LittleEndian(body[TimestampOffset..]),
+                    FrequencyHz     = BinaryPrimitives.ReadUInt64LittleEndian(body[FrequencyOffset..]),
+                    BandwidthHz     = BinaryPrimitives.ReadUInt32LittleEndian(body[BandwidthOffset..]),
+                    SnrDb           = snrDb,
         };
+
         return true;
     }
 
@@ -49,6 +56,10 @@ public sealed class SdrMessageParser : ISdrMessageParser
         BinaryPrimitives.WriteUInt32LittleEndian(body[BandwidthOffset..], signal.BandwidthHz);
         BinaryPrimitives.WriteDoubleLittleEndian(body[SnrOffset..], signal.SnrDb);
 
-        return new SdrMessage { Header = header, Raw = raw };
+        return new SdrMessage
+        {
+                    Header = header,
+                    Raw    = raw
+        };
     }
 }

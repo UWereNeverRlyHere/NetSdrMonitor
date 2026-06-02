@@ -6,14 +6,14 @@
         <conv:LogLevelToBrushConverter x:Key="LevelBrush" />
     </UserControl.Resources>
 
-    <Grid Background="#FBFBFC">
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <!-- шапка консолі -->
-        <Border Grid.Row="0" Background="#EEEFF3" BorderBrush="#DADCE2" BorderThickness="0,1,0,1" Padding="8,4">
+        <Border Grid.Row="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,1" Padding="8,4">
             <DockPanel LastChildFill="False">
                 <TextBlock DockPanel.Dock="Left" Text="Консоль монітора" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <Button DockPanel.Dock="Right" Content="Очистити" Command="{Binding ClearCommand}" Padding="10,2" />

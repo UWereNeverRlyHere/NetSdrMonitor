@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace NetSdrMonitor.Desktop.Settings;
 
@@ -10,7 +11,12 @@ public sealed class JsonSettingsStore
 {
    private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "settings.json");
 
-   private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
+   // enum-и пишемо рядком ("System"/"Light"/"Dark") — файл лишається читабельним для людини
+   private static readonly JsonSerializerOptions Options = new()
+   {
+      WriteIndented = true,
+      Converters    = { new JsonStringEnumConverter() },
+   };
 
    public AppSettings Load()
    {

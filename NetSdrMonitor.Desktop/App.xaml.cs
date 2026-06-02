@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -6,6 +7,7 @@ using NetSdrMonitor.Desktop.Features.Console;
 using NetSdrMonitor.Desktop.Logging;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Desktop.Shell;
+using NetSdrMonitor.Desktop.Theming;
 using NetSdrMonitor.Infrastructure.Persistence.Sqlite;
 
 namespace NetSdrMonitor.Desktop;
@@ -15,51 +17,69 @@ public partial class App : Application
    private ServiceProvider? _services;
    private ILoggerFactory? _loggerFactory;
    private SimulationController? _simulation;
-
-   protected override async void OnStartup(StartupEventArgs e)
+   [SuppressMessage("ReSharper", "AsyncVoidMethod")]
+   protected async override void OnStartup(StartupEventArgs e)
    {
-      base.OnStartup(e);
+       base.OnStartup(e);
 
-      // мінімальний композиційний корінь: лише реєстрація сховища (фабрика контексту + бутстрапер + фабрика порту).
-      // Конкретику (EF/SQLite) знає тільки тут — решта застосунку бачить лише порт.
-      var collection = new ServiceCollection();
-      collection.AddSqliteSignalStorage();
-      _services = collection.BuildServiceProvider();
-      var repositoryFactory = _services.GetRequiredService<ISignalRecordRepositoryFactory>();
+       try
+       {
+           var collection = new ServiceCollection();
+           collection.AddSqliteSignalStorage();
+           _services = collection.BuildServiceProvider();
+           var repositoryFactory = _services.GetRequiredService<ISignalRecordRepositoryFactory>();
 
-      // логи монітора й мока йдуть у консоль застосунку; Trace «на кадр» відсікаємо порогом Debug
-      var logSink = new UiLogSink();
-      _loggerFactory = LoggerFactory.Create(builder =>
-      {
-         builder.SetMinimumLevel(LogLevel.Debug);
-         builder.AddProvider(new UiLoggerProvider(logSink, LogLevel.Debug));
-      });
+           var logSink = new UiLogSink();
+           _loggerFactory = LoggerFactory.Create(builder =>
+           {
+               builder.SetMinimumLevel(LogLevel.Debug);
+               builder.AddProvider(new UiLoggerProvider(logSink, LogLevel.Debug));
+           });
 
-      var store = new JsonSettingsStore();
-      AppSettings settings = store.Load();
-      _simulation = new SimulationController(settings, repositoryFactory, _loggerFactory, logSink);
+           var store = new JsonSettingsStore();
+           AppSettings settings = store.Load();
+           _simulation = new SimulationController(settings, repositoryFactory, _loggerFactory, logSink);
 
-      var main = new MainWindow(_simulation, store);
-      MainWindow = main;
-      main.Tray.Attach(_simulation, store);
+           var main = new MainWindow(_simulation, store);
+           MainWindow = main;
+           ThemeApplier.Initialize(main, settings.Theme);
+           main.Tray.Attach(_simulation, store);
 
-      main.Show();                              // вантажить трей у будь-якому разі
-      if (settings.HideMainWindowOnStartup)
-         main.Hide();                           // тихий старт: лишаємось у треї
+           main.Show();
+           if (settings.HideMainWindowOnStartup)
+               main.Hide();
 
-      await _simulation.StartAsync();           // одразу починаємо імітацію
+           await _simulation.StartAsync();
+       }
+       catch (Exception ex)
+       {
+           // старт не вдався (сховище, порт тощо) — показуємо причину й коректно завершуємось, а не падаємо мовчки
+           MessageBox.Show(ex.Message, "NetSdrMonitor — помилка запуску",
+                           MessageBoxButton.OK, MessageBoxImage.Error);
+           Shutdown(-1);
+       }
    }
-
-   protected override async void OnExit(ExitEventArgs e)
+   [SuppressMessage("ReSharper", "AsyncVoidMethod")]
+   protected async override void OnExit(ExitEventArgs e)
    {
-      if (_simulation is not null)
-         await _simulation.DisposeAsync();
+       try
+       {
+           if (_simulation is not null)
+               await _simulation.DisposeAsync();
 
-      if (_services is not null)
-         await _services.DisposeAsync();
+           if (_services is not null)
+               await _services.DisposeAsync();
 
-      _loggerFactory?.Dispose();
-
-      base.OnExit(e);
+           _loggerFactory?.Dispose();
+       }
+       catch (Exception ex)
+       {
+           // помилки звільнення на виході не критичні — застосунок усе одно закривається
+           System.Diagnostics.Debug.WriteLine($"Shutdown cleanup failed: {ex}");
+       }
+       finally
+       {
+           base.OnExit(e);
+       }
    }
 }

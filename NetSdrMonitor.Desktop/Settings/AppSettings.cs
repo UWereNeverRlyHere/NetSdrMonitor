@@ -19,6 +19,9 @@ public sealed record AppSettings
       DropProbability           = 0.01,
    };
 
+   // тема оформлення UI: світла, темна або синхронізація з темою Windows
+   public AppTheme Theme { get; init; } = AppTheme.System;
+
    public bool HideMainWindowOnStartup { get; init; }
 
    // летке сховище за замовчуванням: файл БД не створюється, поки користувач не обере SQLite

@@ -6,7 +6,8 @@
         xmlns:ctrl="clr-namespace:NetSdrMonitor.Desktop.Controls"
         xmlns:console="clr-namespace:NetSdrMonitor.Desktop.Features.Console"
         Title="NetSdrMonitor" Height="600" Width="900"
-        Background="#FAFAFB" TextElement.Foreground="#1F2430"
+        Background="{DynamicResource ApplicationBackgroundBrush}"
+        TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
         Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
@@ -19,12 +20,16 @@
             <Setter Property="Margin" Value="0,0,10,0" />
         </Style>
 
-        <!-- трохи більший і жирніший заголовок колонок -->
+        <!-- трохи більший і жирніший заголовок колонок; кольори — з теми, інакше у темній не перефарбовуються -->
         <Style x:Key="HeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Padding" Value="6,4" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
         </Style>
     </Window.Resources>
 
@@ -40,12 +45,14 @@
         <features:AppTray x:Name="Tray" Grid.Row="0" />
 
         <!-- панель керування -->
-        <Border Grid.Row="0" Background="#EEEFF3" BorderBrush="#DADCE2" BorderThickness="0,0,0,1" Padding="8">
+        <Border Grid.Row="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="8">
             <DockPanel LastChildFill="False">
                 <Button DockPanel.Dock="Left" Click="OnToggle" Width="36" Height="36" ToolTip="Старт/стоп імітації"
                         FontFamily="Segoe MDL2 Assets" FontSize="16">
                     <Button.Style>
-                        <Style TargetType="Button">
+                        <!-- BasedOn на неявний стиль теми: інакше кнопка втрачає Fluent-вигляд і hover -->
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Setter Property="Padding" Value="0" />
                             <Setter Property="Content" Value="&#xE768;" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsRunning}" Value="True">
@@ -56,16 +63,16 @@
                     </Button.Style>
                 </Button>
                 <Button DockPanel.Dock="Left" Click="OnSettings" Width="36" Height="36" Margin="6,0,0,0" ToolTip="Налаштування"
-                        Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                        Padding="0" Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
                 <TextBlock DockPanel.Dock="Left" Text="{Binding StatusText}" FontWeight="SemiBold"
                            VerticalAlignment="Center" Margin="16,0,0,0" />
-                <TextBlock DockPanel.Dock="Left" Text="{Binding SignalCount, StringFormat='• сигналів: {0}'}" Foreground="#6B7280"
+                <TextBlock DockPanel.Dock="Left" Text="{Binding SignalCount, StringFormat='• сигналів: {0}'}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            VerticalAlignment="Center" Margin="12,0,0,0" />
             </DockPanel>
         </Border>
 
         <!-- панель фільтрації -->
-        <Border Grid.Row="1" Background="#F5F6F8" BorderBrush="#DADCE2" BorderThickness="0,0,0,1" Padding="8,6">
+        <Border Grid.Row="1" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="8,6">
             <DockPanel LastChildFill="False">
                 <TextBlock DockPanel.Dock="Left" Text="Пошук:" VerticalAlignment="Center" Margin="0,0,6,0" />
                 <TextBox DockPanel.Dock="Left" Width="160" VerticalAlignment="Center"
@@ -91,8 +98,11 @@
                   CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
                   SelectionMode="Single" SelectionUnit="FullRow"
                   GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                  RowBackground="White" AlternatingRowBackground="#F6F7F9"
-                  BorderThickness="0" Background="White" FontSize="14"
+                  Background="{DynamicResource ApplicationBackgroundBrush}"
+                  RowBackground="{DynamicResource ApplicationBackgroundBrush}"
+                  AlternatingRowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                  BorderThickness="0" FontSize="14"
                   ColumnHeaderStyle="{StaticResource HeaderStyle}"
                   Loaded="OnGridLoaded" ColumnReordered="OnColumnsChanged">
             <DataGrid.RowStyle>
@@ -128,7 +138,7 @@
         <!-- роздільник між таблицею та консоллю: тягнемо мишею, висота запам'ятовується -->
         <GridSplitter x:Name="ConsoleSplitter" Grid.Row="3" Height="5" Visibility="Collapsed"
                       HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                      ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Background="#DADCE2" />
+                      ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
 
         <!-- нижня консоль логів монітора (видимість — за налаштуванням) -->
         <console:ConsoleView x:Name="ConsoleHost" Grid.Row="4" Visibility="Collapsed"
