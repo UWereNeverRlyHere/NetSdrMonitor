@@ -29,6 +29,9 @@
         <ProjectReference Include="..\NetSdrMonitor.Domain\NetSdrMonitor.Domain.csproj" />
         <ProjectReference Include="..\NetSdrMonitor.Core\NetSdrMonitor.Core.csproj" />
         <ProjectReference Include="..\NetSdrMonitor.Infrastructure\NetSdrMonitor.Infrastructure.csproj" />
+        <!-- наскрізний тест монітора поверх loopback: правила протоколу + комунікація (SdrMonitor, TCP-транспорт, мок-сервер) -->
+        <ProjectReference Include="..\NetSdrMonitor.Protocol\NetSdrMonitor.Protocol.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Communication\NetSdrMonitor.Communication.csproj" />
     </ItemGroup>
 
 </Project>
