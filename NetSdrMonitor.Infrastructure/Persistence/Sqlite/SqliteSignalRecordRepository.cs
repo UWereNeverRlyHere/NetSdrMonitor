@@ -11,7 +11,7 @@ namespace NetSdrMonitor.Infrastructure.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteSignalRecordRepository(IDbContextFactory<SignalRecordDbContext> contextFactory) : ISignalRecordRepository
 {
-   /// <summary>
+    /// <summary>
     /// Зберігає запис разом із його сигналами.
     /// </summary>
     public async Task AddAsync(SignalRecord record, CancellationToken cancellationToken = default)
@@ -31,10 +31,10 @@ public sealed class SqliteSignalRecordRepository(IDbContextFactory<SignalRecordD
         await using SignalRecordDbContext db = await contextFactory.CreateDbContextAsync(cancellationToken);
 
         List<SignalRecordEntity> entities = await db.Records
-            .AsNoTracking()
-            .Include(r => r.Signals)
-            .OrderBy(r => r.Id)
-            .ToListAsync(cancellationToken);
+                                                    .AsNoTracking()
+                                                    .Include(r => r.Signals)
+                                                    .OrderBy(r => r.Id)
+                                                    .ToListAsync(cancellationToken);
 
         var result = new List<SignalRecord>(entities.Count);
         foreach (SignalRecordEntity entity in entities)
@@ -65,17 +65,20 @@ public sealed class SqliteSignalRecordRepository(IDbContextFactory<SignalRecordD
 
     private static SignalRecordEntity ToEntity(SignalRecord record)
     {
-        var entity = new SignalRecordEntity { IsClosed = record.IsClosed };
+        var entity = new SignalRecordEntity
+        {
+                    IsClosed = record.IsClosed
+        };
 
         int ordinal = 0;
         foreach (Signal signal in record.Signals)
             entity.Signals.Add(new SignalEntity
             {
-                Ordinal         = ordinal++,
-                TimestampUnixMs = signal.TimestampUnixMs,
-                FrequencyHz     = signal.FrequencyHz,
-                BandwidthHz     = signal.BandwidthHz,
-                SnrDb           = signal.SnrDb,
+                        Ordinal         = ordinal++,
+                        TimestampUnixMs = signal.TimestampUnixMs,
+                        FrequencyHz     = signal.FrequencyHz,
+                        BandwidthHz     = signal.BandwidthHz,
+                        SnrDb           = signal.SnrDb,
             });
 
         return entity;
@@ -83,8 +86,6 @@ public sealed class SqliteSignalRecordRepository(IDbContextFactory<SignalRecordD
 
     private static SignalRecord ToDomain(SignalRecordEntity entity)
     {
-        // програємо сигнали в збереженому порядку: перший задає базові поля рядка,
-        // решта доливається в межах смуги, медіана відновлюється сама; за потреби закриваємо
         List<SignalEntity> ordered = entity.Signals.OrderBy(s => s.Ordinal).ToList();
 
         var record = new SignalRecord(ToSignal(ordered[0]));
@@ -97,12 +98,11 @@ public sealed class SqliteSignalRecordRepository(IDbContextFactory<SignalRecordD
         return record;
     }
 
-    private static Signal ToSignal(SignalEntity entity) =>
-        new()
-        {
-            TimestampUnixMs = entity.TimestampUnixMs,
-            FrequencyHz     = entity.FrequencyHz,
-            BandwidthHz     = entity.BandwidthHz,
-            SnrDb           = entity.SnrDb,
-        };
+    private static Signal ToSignal(SignalEntity entity) => new()
+    {
+                TimestampUnixMs = entity.TimestampUnixMs,
+                FrequencyHz     = entity.FrequencyHz,
+                BandwidthHz     = entity.BandwidthHz,
+                SnrDb           = entity.SnrDb,
+    };
 }

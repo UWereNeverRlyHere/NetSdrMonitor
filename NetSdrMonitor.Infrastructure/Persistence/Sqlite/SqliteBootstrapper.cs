@@ -8,7 +8,7 @@ namespace NetSdrMonitor.Infrastructure.Persistence.Sqlite;
 /// </summary>
 public sealed class SqliteBootstrapper(IDbContextFactory<SignalRecordDbContext> contextFactory)
 {
-   /// <summary>
+    /// <summary>
     /// Створює БД і таблиці, якщо їх немає (ідемпотентно). Повертає true, якщо БД щойно створено.
     /// </summary>
     public async Task<bool> EnsureCreatedAsync(CancellationToken cancellationToken = default)

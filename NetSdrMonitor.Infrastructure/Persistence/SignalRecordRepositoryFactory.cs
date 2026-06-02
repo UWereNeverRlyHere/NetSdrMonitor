@@ -10,16 +10,14 @@ namespace NetSdrMonitor.Infrastructure.Persistence;
 /// летке сховище в пам'яті або персистентне SQLite із гарантовано створеною БД.
 /// </summary>
 public sealed class SignalRecordRepositoryFactory(
-    IDbContextFactory<SignalRecordDbContext> contextFactory,
-    SqliteBootstrapper bootstrapper) : ISignalRecordRepositoryFactory
+            IDbContextFactory<SignalRecordDbContext> contextFactory,
+            SqliteBootstrapper                       bootstrapper) : ISignalRecordRepositoryFactory
 {
     public async Task<ISignalRecordRepository> CreateAsync(bool inMemory, CancellationToken cancellationToken = default)
     {
-        // летке сховище ні від чого не залежить і файлу БД не торкається
         if (inMemory)
             return new InMemorySignalRecordRepository();
 
-        // персистентний варіант: спершу гарантуємо файл БД і схему, далі віддаємо готовий репозиторій
         await bootstrapper.EnsureCreatedAsync(cancellationToken);
         return new SqliteSignalRecordRepository(contextFactory);
     }

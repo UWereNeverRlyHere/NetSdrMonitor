@@ -6,18 +6,18 @@ namespace NetSdrMonitor.Infrastructure.Persistence.Sqlite;
 /// </summary>
 public sealed class SignalRecordEntity
 {
-    /// <summary>
-    /// Сурогатний первинний ключ (автоінкремент).
-    /// </summary>
-    public long Id { get; set; }
+   /// <summary>
+   /// Первинний ключ (автоінкремент).
+   /// </summary>
+   public long Id { get; set; }
 
-    /// <summary>
-    /// Чи був запис закритий на момент збереження.
-    /// </summary>
-    public bool IsClosed { get; set; }
+   /// <summary>
+   /// Чи був запис закритий на момент збереження.
+   /// </summary>
+   public bool IsClosed { get; set; }
 
-    /// <summary>
-    /// Сигнали запису в порядку надходження (для відновлення лічильника й медіани).
-    /// </summary>
-    public List<SignalEntity> Signals { get; } = [];
+   /// <summary>
+   /// Сигнали запису в порядку надходження (для відновлення лічильника й медіани).
+   /// </summary>
+   public List<SignalEntity> Signals { get; } = [];
 }
