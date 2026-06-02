@@ -1,6 +1,7 @@
 using System.Windows;
 using NetSdrMonitor.Desktop.Settings;
 using Wpf.Ui.Appearance;
+using Wpf.Ui.Controls;
 
 namespace NetSdrMonitor.Desktop.Theming;
 
@@ -22,7 +23,8 @@ public static class ThemeApplier
         if (!_initialized)
         {
             _initialized = true;
-            SystemThemeWatcher.Watch(host); // реагуємо на перемикання теми Windows на льоту
+            SystemThemeWatcher.Watch(host);                          // реагуємо на перемикання теми Windows на льоту
+            SystemThemeWatcher.Watch(host, WindowBackdropType.None); // стежимо за темою, але без підложки, що ховає заголовок
 
             // у фіксованому режимі (Світла/Темна) не даємо системному перемикачу збити вибір користувача
             ApplicationThemeManager.Changed += (applicationTheme, _) =>

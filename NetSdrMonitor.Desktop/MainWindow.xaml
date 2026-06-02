@@ -5,10 +5,11 @@
         xmlns:behaviors="clr-namespace:NetSdrMonitor.Desktop.Behaviors"
         xmlns:ctrl="clr-namespace:NetSdrMonitor.Desktop.Controls"
         xmlns:console="clr-namespace:NetSdrMonitor.Desktop.Features.Console"
-        Title="NetSdrMonitor" Height="600" Width="900"
+        Title="NetSdrMonitor" Height="600" Width="900" FontWeight="Bold" 
         Background="{DynamicResource ApplicationBackgroundBrush}"
         TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-        Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterScreen">
+        Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterScreen"
+        >
 
     <Window.Resources>
         <!-- проксі DataContext для заголовка колонки частоти (він поза візуальним деревом) -->
