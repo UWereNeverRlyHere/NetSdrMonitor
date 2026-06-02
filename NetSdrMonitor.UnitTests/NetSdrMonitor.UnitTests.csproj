@@ -29,6 +29,9 @@
         <ProjectReference Include="..\NetSdrMonitor.Domain\NetSdrMonitor.Domain.csproj" />
         <ProjectReference Include="..\NetSdrMonitor.Protocol\NetSdrMonitor.Protocol.csproj" />
         <ProjectReference Include="..\NetSdrMonitor.Communication\NetSdrMonitor.Communication.csproj" />
+        <!-- порт сховища (Core) та його InMemory-реалізація (Infrastructure) -->
+        <ProjectReference Include="..\NetSdrMonitor.Core\NetSdrMonitor.Core.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Infrastructure\NetSdrMonitor.Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

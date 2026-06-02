@@ -24,4 +24,11 @@
         <Using Include="Xunit"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- наскрізний тест сховища: домен (Signal/SignalRecord), порт (Core) та SQLite-реалізація (Infrastructure) -->
+        <ProjectReference Include="..\NetSdrMonitor.Domain\NetSdrMonitor.Domain.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Core\NetSdrMonitor.Core.csproj" />
+        <ProjectReference Include="..\NetSdrMonitor.Infrastructure\NetSdrMonitor.Infrastructure.csproj" />
+    </ItemGroup>
+
 </Project>

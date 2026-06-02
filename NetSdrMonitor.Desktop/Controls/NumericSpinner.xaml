@@ -1,0 +1,19 @@
+<UserControl x:Class="NetSdrMonitor.Desktop.Controls.NumericSpinner"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+   <Grid>
+      <Grid.ColumnDefinitions>
+         <ColumnDefinition Width="*"/>
+         <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <TextBox Grid.Column="0" VerticalContentAlignment="Center"
+               Text="{Binding Value, ElementName=Root, StringFormat={}{0:0.####}}"/>
+
+      <StackPanel Grid.Column="1" Width="20" Margin="2,0,0,0">
+         <RepeatButton Content="▲" FontSize="7" Padding="0" Click="OnUp"/>
+         <RepeatButton Content="▼" FontSize="7" Padding="0" Click="OnDown"/>
+      </StackPanel>
+   </Grid>
+</UserControl>
