@@ -18,6 +18,7 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
    [ObservableProperty] private bool   _hideMainWindowOnStartup = source.HideMainWindowOnStartup;
    [ObservableProperty] private bool   _useInMemoryStorage = source.UseInMemoryStorage;
    [ObservableProperty] private bool   _useMedianFrequency = source.UseMedianFrequency;
+   [ObservableProperty] private bool   _showConsole = source.ShowConsole;
 
    /// <summary>
    /// Збирає оновлені налаштування з полів, зберігаючи решту значень джерела.
@@ -40,5 +41,6 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
          HideMainWindowOnStartup = HideMainWindowOnStartup,
          UseInMemoryStorage      = UseInMemoryStorage,
          UseMedianFrequency      = UseMedianFrequency,
+         ShowConsole             = ShowConsole,
    };
 }

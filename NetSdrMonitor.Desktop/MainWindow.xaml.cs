@@ -16,10 +16,13 @@ namespace NetSdrMonitor.Desktop;
 /// </summary>
 public partial class MainWindow : Window
 {
+   private const double DefaultConsoleHeight = 180; // ≈28% від типової висоти вікна
+
    private readonly SimulationController _simulation;
    private readonly JsonSettingsStore _store;
 
    private bool _layoutApplied;
+   private double _consoleHeightPx = DefaultConsoleHeight;
 
    public MainWindow(SimulationController simulation, JsonSettingsStore store)
    {
@@ -27,6 +30,13 @@ public partial class MainWindow : Window
       _simulation = simulation;
       _store      = store;
       DataContext = simulation;
+
+      AppSettings settings = _store.Load();
+      if (settings.ConsoleHeight > 0)
+         _consoleHeightPx = settings.ConsoleHeight;
+
+      _simulation.PropertyChanged += OnSimulationPropertyChanged;
+      ApplyConsole(_simulation.ShowConsole);
    }
 
    private void OnToggle(object sender, RoutedEventArgs e) => _ = _simulation.ToggleAsync();
@@ -49,6 +59,32 @@ public partial class MainWindow : Window
          new SignalDetailsWindow(row) { Owner = this }.Show();
    }
 
+   private void OnSimulationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+   {
+      if (e.PropertyName == nameof(SimulationController.ShowConsole))
+         ApplyConsole(_simulation.ShowConsole);
+   }
+
+   // показ/приховування нижньої консолі; ховаючи, запам'ятовуємо її висоту, щоб повернути ту саму
+   private void ApplyConsole(bool show)
+   {
+      if (show)
+      {
+         ConsoleRow.Height          = new GridLength(_consoleHeightPx);
+         ConsoleSplitter.Visibility = Visibility.Visible;
+         ConsoleHost.Visibility     = Visibility.Visible;
+      }
+      else
+      {
+         if (ConsoleRow.Height is { IsAbsolute: true, Value: > 0 })
+            _consoleHeightPx = ConsoleRow.Height.Value;
+
+         ConsoleRow.Height          = new GridLength(0);
+         ConsoleSplitter.Visibility = Visibility.Collapsed;
+         ConsoleHost.Visibility     = Visibility.Collapsed;
+      }
+   }
+
    private void OnResetFilter(object sender, RoutedEventArgs e)
    {
       _simulation.Table.SearchText      = string.Empty;
@@ -66,22 +102,26 @@ public partial class MainWindow : Window
    }
 
    // перетягування колонки — зберігаємо одразу; ширини доберуться при ховуванні вікна
-   private void OnColumnsChanged(object? sender, DataGridColumnEventArgs e) => SaveColumnLayout();
+   private void OnColumnsChanged(object? sender, DataGridColumnEventArgs e) => SaveLayout();
 
    protected override void OnClosing(CancelEventArgs e)
    {
       base.OnClosing(e);
-      SaveColumnLayout(); // фіксуємо ширини/порядок перед тим, як сховати вікно у трей
-      e.Cancel = true;    // не закриваємось — ховаємось у трей
+      SaveLayout();    // фіксуємо порядок/ширину колонок і висоту консолі перед тим, як сховати у трей
+      e.Cancel = true; // не закриваємось — ховаємось у трей
       Hide();
    }
 
-   private void SaveColumnLayout()
+   // зберігаємо висоту консолі завжди; розкладку колонок — лише коли грід уже реалізувався
+   private void SaveLayout()
    {
-      if (!_layoutApplied)
-         return;
+      if (ConsoleRow.Height is { IsAbsolute: true, Value: > 0 })
+         _consoleHeightPx = ConsoleRow.Height.Value;
 
-      AppSettings settings = _store.Load() with { Columns = ColumnLayout.Capture(SignalsGrid) };
+      AppSettings settings = _store.Load() with { ConsoleHeight = _consoleHeightPx };
+      if (_layoutApplied)
+         settings = settings with { Columns = ColumnLayout.Capture(SignalsGrid) };
+
       _store.Save(settings);
    }
 }

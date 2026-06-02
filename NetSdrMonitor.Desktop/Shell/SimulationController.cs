@@ -1,11 +1,12 @@
 using System.Net;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using NetSdrMonitor.Communication.Monitor;
 using NetSdrMonitor.Communication.Server;
 using NetSdrMonitor.Core.Abstractions.Communication;
 using NetSdrMonitor.Core.Abstractions.Persistence;
+using NetSdrMonitor.Desktop.Features.Console;
 using NetSdrMonitor.Desktop.Features.Monitor;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Domain.Signals;
@@ -19,6 +20,7 @@ namespace NetSdrMonitor.Desktop.Shell;
 public sealed partial class SimulationController : ObservableObject, IAsyncDisposable
 {
    private readonly ISignalRecordRepositoryFactory _repositoryFactory;
+   private readonly ILoggerFactory _loggerFactory;
    private readonly SynchronizationContext _ui;
    private readonly DispatcherTimer _uiTimer;
 
@@ -38,10 +40,20 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
    [ObservableProperty]
    private long _signalCount;
 
-   public SimulationController(AppSettings settings, ISignalRecordRepositoryFactory repositoryFactory)
+   [ObservableProperty]
+   private bool _showConsole;
+
+   public SimulationController(
+         AppSettings                    settings,
+         ISignalRecordRepositoryFactory repositoryFactory,
+         ILoggerFactory                 loggerFactory,
+         UiLogSink                      logSink)
    {
       _settings          = settings;
       _repositoryFactory = repositoryFactory;
+      _loggerFactory     = loggerFactory;
+      _showConsole       = settings.ShowConsole;
+      Console            = new ConsoleViewModel(logSink);
       _ui                = SynchronizationContext.Current ?? new SynchronizationContext();
       _uiTimer = new DispatcherTimer
       {
@@ -55,6 +67,11 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
    /// </summary>
    public MonitorViewModel Table { get; } = new();
 
+   /// <summary>
+   /// Консоль логів монітора й мок-сервера.
+   /// </summary>
+   public ConsoleViewModel Console { get; }
+
    public string ToggleLabel => IsRunning ? "Зупинити імітацію" : "Розпочати імітацію";
 
    /// <summary>
@@ -65,6 +82,7 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
    {
       _settings = settings;
       Table.UseMedian = settings.UseMedianFrequency; // заголовок/режим колонки оновлюємо одразу
+      ShowConsole     = settings.ShowConsole;        // показ консолі застосовуємо без перезапуску
 
       if (!IsRunning)
          return;
@@ -87,9 +105,9 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
 
       // свіжі мок + монітор під поточні налаштування
       var generator = new RandomSignalGenerator();
-      var mock = new MockSignalServer(new IPEndPoint(IPAddress.Loopback, 0), generator, NullLogger<MockSignalServer>.Instance, _settings.Mock);
+      var mock = new MockSignalServer(new IPEndPoint(IPAddress.Loopback, 0), generator, _loggerFactory.CreateLogger<MockSignalServer>(), _settings.Mock);
       _factory               =  new MockLoopbackTransportFactory(mock);
-      _monitor               =  new SdrMonitor(NullLogger<SdrMonitor>.Instance, _factory, _settings.Monitor);
+      _monitor               =  new SdrMonitor(_loggerFactory.CreateLogger<SdrMonitor>(), _factory, _settings.Monitor);
       _monitor.StatusChanged += OnStatusChanged;
 
       Interlocked.Exchange(ref _received, 0);

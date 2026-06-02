@@ -275,6 +275,11 @@ public sealed class SdrMonitor : ISdrMonitor
          _logger.LogDebug("Signal decoded: {FrequencyHz} Hz", decoded.FrequencyHz);
          signal = decoded;
       }
+      else if (message.Header.Type == SdrMessageType.DataItem0)
+      {
+         // валідне обрамлення, але тіло не схоже на сигнал — кадр відкидаємо, потік не рвемо
+         _logger.LogWarning("Malformed data frame ignored ({Length} bytes)", message.Header.Length);
+      }
 
       return new HandledMessage(message.Header.Length, signal);
    }

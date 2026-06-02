@@ -9,7 +9,16 @@ namespace NetSdrMonitor.Desktop.Settings;
 public sealed record AppSettings
 {
    public SdrMonitorOptions Monitor { get; init; } = new();
-   public MockSignalServerOptions Mock { get; init; } = new();
+
+   // демо-дефолти: трохи «хаосу», щоб консоль одразу показувала і биті кадри, і обриви/реконекти
+   // (саме ядро мока за замовчуванням детерміноване — нулі; вмикає демо тут)
+   public MockSignalServerOptions Mock { get; init; } = new()
+   {
+      MalformedFrameProbability = 0.05,
+      UnknownControlProbability = 0.03,
+      DropProbability           = 0.01,
+   };
+
    public bool HideMainWindowOnStartup { get; init; }
 
    // летке сховище за замовчуванням: файл БД не створюється, поки користувач не обере SQLite
@@ -17,6 +26,10 @@ public sealed record AppSettings
 
    // частоту показуємо як медіану детекцій запису (інакше — за першим сигналом)
    public bool UseMedianFrequency { get; init; } = true;
+
+   // нижня консоль логів: показувати й яку висоту (px) їй відвести (0 — узяти типову)
+   public bool   ShowConsole   { get; init; } = true;
+   public double ConsoleHeight { get; init; }
 
    public IReadOnlyList<ColumnSetting> Columns { get; init; } = [];
 }

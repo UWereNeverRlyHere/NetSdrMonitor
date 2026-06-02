@@ -4,6 +4,7 @@
         xmlns:features="clr-namespace:NetSdrMonitor.Desktop.Features"
         xmlns:behaviors="clr-namespace:NetSdrMonitor.Desktop.Behaviors"
         xmlns:ctrl="clr-namespace:NetSdrMonitor.Desktop.Controls"
+        xmlns:console="clr-namespace:NetSdrMonitor.Desktop.Features.Console"
         Title="NetSdrMonitor" Height="600" Width="900"
         Background="#FAFAFB" TextElement.Foreground="#1F2430"
         Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterScreen">
@@ -31,7 +32,9 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*" MinHeight="140" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition x:Name="ConsoleRow" Height="0" />
         </Grid.RowDefinitions>
 
         <features:AppTray x:Name="Tray" Grid.Row="0" />
@@ -121,5 +124,14 @@
                                     ElementStyle="{StaticResource NumCell}" />
             </DataGrid.Columns>
         </DataGrid>
+
+        <!-- роздільник між таблицею та консоллю: тягнемо мишею, висота запам'ятовується -->
+        <GridSplitter x:Name="ConsoleSplitter" Grid.Row="3" Height="5" Visibility="Collapsed"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                      ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Background="#DADCE2" />
+
+        <!-- нижня консоль логів монітора (видимість — за налаштуванням) -->
+        <console:ConsoleView x:Name="ConsoleHost" Grid.Row="4" Visibility="Collapsed"
+                             DataContext="{Binding Console}" />
     </Grid>
 </Window>
