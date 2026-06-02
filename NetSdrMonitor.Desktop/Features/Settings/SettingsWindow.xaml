@@ -3,15 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:ctrl="clr-namespace:NetSdrMonitor.Desktop.Controls"
-        Title="Налаштування" Width="400
-        " SizeToContent="Height"
+        Title="Налаштування" Width="400" 
+        SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
         Background="{DynamicResource ApplicationBackgroundBrush}"
         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
         Icon="/Assets/Icons/app.ico">
    <StackPanel Margin="12">
 
-      <TextBlock Text="Монітор" FontWeight="Bold" Margin="0,0,0,2"/>
+      <TextBlock Text="Монітор" FontWeight="Bold" Margin="0,0,0,3"/>
       <Grid>
          <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -33,7 +33,7 @@
          <ctrl:NumericSpinner Grid.Row="2" Grid.Column="1" Margin="0,3" Step="5" Minimum="1" Value="{Binding ConnectTimeoutSeconds}"/>
       </Grid>
 
-      <TextBlock Text="Імітація (мок-сервер)" FontWeight="Bold" Margin="0,10,0,0"/>
+      <TextBlock Text="Імітація (мок-сервер)" FontWeight="Bold" Margin="0,10,0,3"/>
       <Grid>
          <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>

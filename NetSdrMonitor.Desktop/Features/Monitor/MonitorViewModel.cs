@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using NetSdrMonitor.Core.Abstractions.Persistence;
 using NetSdrMonitor.Domain.Aggregation;
 using NetSdrMonitor.Domain.Signals;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace NetSdrMonitor.Desktop.Features.Monitor;
 

@@ -10,52 +10,52 @@ namespace NetSdrMonitor.Desktop.Theming;
 /// </summary>
 public static class ThemeApplier
 {
-   private static AppTheme _mode = AppTheme.System;
-   private static bool _initialized;
+    private static AppTheme _mode = AppTheme.System;
+    private static bool _initialized;
 
-   /// <summary>
-   /// Налаштовує відстеження системної теми (одноразово) і застосовує початковий режим.
-   /// Викликається на старті з головним вікном як «довгоживучим» хостом для спостерігача.
-   /// </summary>
-   public static void Initialize(Window host, AppTheme theme)
-   {
-      if (!_initialized)
-      {
-         _initialized = true;
-         SystemThemeWatcher.Watch(host); // реагуємо на перемикання теми Windows на льоту
+    /// <summary>
+    /// Налаштовує відстеження системної теми (одноразово) і застосовує початковий режим.
+    /// Викликається на старті з головним вікном як «довгоживучим» хостом для спостерігача.
+    /// </summary>
+    public static void Initialize(Window host, AppTheme theme)
+    {
+        if (!_initialized)
+        {
+            _initialized = true;
+            SystemThemeWatcher.Watch(host); // реагуємо на перемикання теми Windows на льоту
 
-         // у фіксованому режимі (Світла/Темна) не даємо системному перемикачу збити вибір користувача
-         ApplicationThemeManager.Changed += (applicationTheme, _) =>
-         {
-            if (_mode == AppTheme.System)
-               return;
+            // у фіксованому режимі (Світла/Темна) не даємо системному перемикачу збити вибір користувача
+            ApplicationThemeManager.Changed += (applicationTheme, _) =>
+            {
+                if (_mode == AppTheme.System)
+                    return;
 
-            ApplicationTheme desired = _mode == AppTheme.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light;
-            if (applicationTheme != desired)
-               ApplicationThemeManager.Apply(desired);
-         };
-      }
+                ApplicationTheme desired = _mode == AppTheme.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light;
+                if (applicationTheme != desired)
+                    ApplicationThemeManager.Apply(desired);
+            };
+        }
 
-      Apply(theme);
-   }
+        Apply(theme);
+    }
 
-   /// <summary>
-   /// Застосовує тему негайно: фіксовану світлу/темну або поточну тему ОС (системний режим).
-   /// </summary>
-   public static void Apply(AppTheme theme)
-   {
-      _mode = theme;
-      switch (theme)
-      {
-         case AppTheme.Light:
-            ApplicationThemeManager.Apply(ApplicationTheme.Light);
-            break;
-         case AppTheme.Dark:
-            ApplicationThemeManager.Apply(ApplicationTheme.Dark);
-            break;
-         default: // System — беремо те, що зараз стоїть у Windows
-            ApplicationThemeManager.ApplySystemTheme();
-            break;
-      }
-   }
+    /// <summary>
+    /// Застосовує тему негайно: фіксовану світлу/темну або поточну тему ОС (системний режим).
+    /// </summary>
+    public static void Apply(AppTheme theme)
+    {
+        _mode = theme;
+        switch (theme)
+        {
+            case AppTheme.Light:
+                ApplicationThemeManager.Apply(ApplicationTheme.Light);
+                break;
+            case AppTheme.Dark:
+                ApplicationThemeManager.Apply(ApplicationTheme.Dark);
+                break;
+            default: // System — беремо те, що зараз стоїть у Windows
+                ApplicationThemeManager.ApplySystemTheme();
+                break;
+        }
+    }
 }

@@ -11,25 +11,13 @@
         Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <!-- проксі DataContext для заголовків колонок (вони поза візуальним деревом) -->
+        <!-- проксі DataContext для заголовка колонки частоти (він поза візуальним деревом) -->
         <behaviors:BindingProxy x:Key="Proxy" Data="{Binding}" />
 
         <!-- вирівнювання числових колонок праворуч -->
         <Style x:Key="NumCell" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Right" />
             <Setter Property="Margin" Value="0,0,10,0" />
-        </Style>
-
-        <!-- трохи більший і жирніший заголовок колонок; кольори — з теми, інакше у темній не перефарбовуються -->
-        <Style x:Key="HeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Padding" Value="6,4" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
-            <Setter Property="BorderThickness" Value="0,0,0,1" />
         </Style>
     </Window.Resources>
 
@@ -47,23 +35,23 @@
         <!-- панель керування -->
         <Border Grid.Row="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="8">
             <DockPanel LastChildFill="False">
-                <Button DockPanel.Dock="Left" Click="OnToggle" Width="36" Height="36" ToolTip="Старт/стоп імітації"
-                        FontFamily="Segoe MDL2 Assets" FontSize="16">
-                    <Button.Style>
-                        <!-- BasedOn на неявний стиль теми: інакше кнопка втрачає Fluent-вигляд і hover -->
-                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Content" Value="&#xE768;" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                    <Setter Property="Content" Value="&#xE769;" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
+                <Button DockPanel.Dock="Left" Click="OnToggle" Width="30" Height="30" Padding="0" ToolTip="Старт/стоп імітації">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="16">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="&#xE768;" />            <!-- старт -->
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                        <Setter Property="Text" Value="&#xE769;" />      <!-- пауза -->
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </Button>
-                <Button DockPanel.Dock="Left" Click="OnSettings" Width="36" Height="36" Margin="6,0,0,0" ToolTip="Налаштування"
-                        Padding="0" Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                <Button DockPanel.Dock="Left" Click="OnSettings" Width="30" Height="30" Margin="6,0,0,0" Padding="0" ToolTip="Налаштування">
+                    <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16" />
+                </Button>
                 <TextBlock DockPanel.Dock="Left" Text="{Binding StatusText}" FontWeight="SemiBold"
                            VerticalAlignment="Center" Margin="16,0,0,0" />
                 <TextBlock DockPanel.Dock="Left" Text="{Binding SignalCount, StringFormat='• сигналів: {0}'}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -79,19 +67,19 @@
                          Text="{Binding Table.SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                 <TextBlock DockPanel.Dock="Left" Text="SNR ≥" VerticalAlignment="Center" Margin="16,0,6,0" />
-                <ctrl:NumericSpinner DockPanel.Dock="Left" Width="84" VerticalAlignment="Center"
+                <ctrl:NumericSpinner DockPanel.Dock="Left" Width="64" Height="32" VerticalAlignment="Center"
                                      IntegerOnly="True" Minimum="0" Maximum="40" Step="1" Value="{Binding Table.MinSnrDb}" />
 
                 <TextBlock DockPanel.Dock="Left" Text="Сигналів ≥" VerticalAlignment="Center" Margin="16,0,6,0" />
-                <ctrl:NumericSpinner DockPanel.Dock="Left" Width="84" VerticalAlignment="Center"
+                <ctrl:NumericSpinner DockPanel.Dock="Left" Width="64" Height="32" VerticalAlignment="Center"
                                      IntegerOnly="True" Minimum="0" Step="1" Value="{Binding Table.MinSignalCount}" />
 
-                <Button DockPanel.Dock="Right" Content="Очистити журнал" Click="OnClearLog" Padding="10,3" Margin="8,0,0,0" />
-                <Button DockPanel.Dock="Right" Content="Скинути фільтр" Click="OnResetFilter" Padding="10,3" />
+                <Button DockPanel.Dock="Right" Content="Очистити журнал" Height="32" Click="OnClearLog" Padding="10,3" Margin="8,0,0,0" />
+                <Button DockPanel.Dock="Right" Content="Скинути фільтр" Height="32" Click="OnResetFilter" Padding="10,3" />
             </DockPanel>
         </Border>
 
-        <!-- таблиця агрегованих записів -->
+        <!-- таблиця агрегованих записів: заголовки, виділення й чергування рядків бере тема WPF-UI -->
         <DataGrid x:Name="SignalsGrid" Grid.Row="2"
                   ItemsSource="{Binding Table.RowsView}"
                   AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
@@ -99,18 +87,9 @@
                   SelectionMode="Single" SelectionUnit="FullRow"
                   GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                   Background="{DynamicResource ApplicationBackgroundBrush}"
-                  RowBackground="{DynamicResource ApplicationBackgroundBrush}"
-                  AlternatingRowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                   BorderThickness="0" FontSize="14"
-                  ColumnHeaderStyle="{StaticResource HeaderStyle}"
+                  PreviewMouseRightButtonDown="OnRowRightClick"
                   Loaded="OnGridLoaded" ColumnReordered="OnColumnsChanged">
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <!-- ПКМ виділяє рядок під курсором; далі відкривається контекстне меню гріда -->
-                    <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnRowRightClick" />
-                </Style>
-            </DataGrid.RowStyle>
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Показати сигнали" Click="OnShowSignals" />

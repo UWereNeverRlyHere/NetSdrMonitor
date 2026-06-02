@@ -9,10 +9,10 @@ namespace NetSdrMonitor.Desktop.Logging;
 /// </summary>
 public sealed class UiLoggerProvider(UiLogSink sink, LogLevel minLevel) : ILoggerProvider
 {
-   public ILogger CreateLogger(string categoryName) => new UiLogger(categoryName, sink, minLevel);
+    public ILogger CreateLogger(string categoryName) => new UiLogger(categoryName, sink, minLevel);
 
-   public void Dispose()
-   {
-      // окремих ресурсів на провайдер немає
-   }
+    public void Dispose()
+    {
+        // окремих ресурсів на провайдер немає
+    }
 }
