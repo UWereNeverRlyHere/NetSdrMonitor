@@ -15,7 +15,7 @@ namespace NetSdrMonitor.Desktop;
 /// Головне вікно. «Закриття» ховає його у трей; вихід — лише через меню трея.
 /// Розкладку колонок (порядок і ширина) відновлюємо при показі та зберігаємо при змінах.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private const double DefaultConsoleHeight = 180; // ≈28% від типової висоти вікна
 
@@ -31,7 +31,7 @@ public partial class MainWindow : Window
         _simulation = simulation;
         _store      = store;
         DataContext = simulation;
-
+        
         AppSettings settings = _store.Load();
         if (settings.ConsoleHeight > 0)
             _consoleHeightPx = settings.ConsoleHeight;

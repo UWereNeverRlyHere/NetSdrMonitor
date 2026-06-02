@@ -15,10 +15,7 @@ public sealed class JsonSettingsStore
     private static readonly JsonSerializerOptions Options = new()
     {
                 WriteIndented = true,
-                Converters =
-                {
-                            new JsonStringEnumConverter()
-                },
+                Converters = { new JsonStringEnumConverter() },
     };
 
     public AppSettings Load()

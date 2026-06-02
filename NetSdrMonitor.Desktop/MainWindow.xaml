@@ -1,17 +1,18 @@
-<Window x:Class="NetSdrMonitor.Desktop.MainWindow"
+<ui:FluentWindow x:Class="NetSdrMonitor.Desktop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:features="clr-namespace:NetSdrMonitor.Desktop.Features"
         xmlns:behaviors="clr-namespace:NetSdrMonitor.Desktop.Behaviors"
         xmlns:ctrl="clr-namespace:NetSdrMonitor.Desktop.Controls"
         xmlns:console="clr-namespace:NetSdrMonitor.Desktop.Features.Console"
-        Title="NetSdrMonitor" Height="600" Width="900" FontWeight="Bold" 
+        Title="NetSdrMonitor" Height="600" Width="900"
+        ExtendsContentIntoTitleBar="True" WindowBackdropType="None" 
         Background="{DynamicResource ApplicationBackgroundBrush}"
         TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-        Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterScreen"
-        >
+        Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterScreen">
 
-    <Window.Resources>
+    <ui:FluentWindow.Resources>
         <!-- проксі DataContext для заголовка колонки частоти (він поза візуальним деревом) -->
         <behaviors:BindingProxy x:Key="Proxy" Data="{Binding}" />
 
@@ -20,9 +21,19 @@
             <Setter Property="HorizontalAlignment" Value="Right" />
             <Setter Property="Margin" Value="0,0,10,0" />
         </Style>
-    </Window.Resources>
+    </ui:FluentWindow.Resources>
 
-    <Grid>
+    <DockPanel>
+        <!-- власна плашка заголовка: це елемент контенту, тож назва вікна повністю керована (а не системний каптіон) -->
+        <ui:TitleBar DockPanel.Dock="Top" Title="NetSdrMonitor"
+                     Background="{DynamicResource ApplicationBackgroundBrush}"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="/Assets/Icons/app.ico" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -124,4 +135,5 @@
         <console:ConsoleView x:Name="ConsoleHost" Grid.Row="4" Visibility="Collapsed"
                              DataContext="{Binding Console}" />
     </Grid>
-</Window>
+    </DockPanel>
+</ui:FluentWindow>
