@@ -18,7 +18,7 @@
       <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
       <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
       <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-      <!-- тема Fluent 2 для UI; впроваджуємо поетапно (старт — вікно налаштувань) -->
+      <!-- тема Fluent 2 для UI; повне впровадження — на рівні App.xaml + ApplicationThemeManager -->
       <PackageReference Include="WPF-UI" Version="4.3.0" />
     </ItemGroup>
 
