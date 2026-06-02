@@ -3,90 +3,102 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:ctrl="clr-namespace:NetSdrMonitor.Desktop.Controls"
-        Title="Налаштування" Width="400" 
+        Title="Налаштування" MinWidth="350" Width="400" MaxWidth="450"  MinHeight="250" Height="270"
+        MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
         SizeToContent="Height"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" ShowInTaskbar="False"
         Background="{DynamicResource ApplicationBackgroundBrush}"
         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
         Icon="/Assets/Icons/app.ico">
-   <StackPanel Margin="12">
+   <DockPanel>
 
-      <TextBlock Text="Монітор" FontWeight="Bold" Margin="0,0,0,3"/>
-      <Grid>
-         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="120"/>
-         </Grid.ColumnDefinitions>
-         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-         </Grid.RowDefinitions>
+      <!-- закріплений футер: кнопки завжди видимі, поза скролом; зверху — лінія-роздільник -->
+      <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+              BorderThickness="0,1,0,0" Padding="12,10">
+         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <ui:Button Content="Зберегти"  Width="90" Appearance="Primary" IsDefault="True" Click="OnSave" Margin="0,0,8,0"/>
+            <ui:Button Content="Скасувати" Width="90" IsCancel="True"/>
+         </StackPanel>
+      </Border>
 
-         <TextBlock Grid.Row="0" Text="Таймаут простою, с" VerticalAlignment="Center" Margin="0,3"/>
-         <ctrl:NumericSpinner Grid.Row="0" Grid.Column="1" Margin="0,3" Step="5" Minimum="1" Value="{Binding IdleTimeoutSeconds}"/>
+      <!-- прокручуваний вміст: на високому DPI / малому екрані з'являється скрол, футер не зникає -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+         <StackPanel Margin="12">
 
-         <TextBlock Grid.Row="1" Grid.Column="0" Text="Пауза реконекту, с" VerticalAlignment="Center" Margin="0,3"/>
-         <ctrl:NumericSpinner Grid.Row="1" Grid.Column="1" Margin="0,3" Step="5" Minimum="1" Value="{Binding ReconnectDelaySeconds}"/>
+            <TextBlock Text="Монітор" FontWeight="Bold" Margin="0,0,0,3"/>
+            <Grid>
+               <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="120"/>
+               </Grid.ColumnDefinitions>
+               <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+               </Grid.RowDefinitions>
 
-         <TextBlock Grid.Row="2" Grid.Column="0" Text="Таймаут підключення, с" VerticalAlignment="Center" Margin="0,3"/>
-         <ctrl:NumericSpinner Grid.Row="2" Grid.Column="1" Margin="0,3" Step="5" Minimum="1" Value="{Binding ConnectTimeoutSeconds}"/>
-      </Grid>
+               <TextBlock Grid.Row="0" Text="Таймаут простою, с" VerticalAlignment="Center" Margin="0,3"/>
+               <ctrl:NumericSpinner Grid.Row="0" Grid.Column="1" Margin="0,3" Step="5" Minimum="1" Value="{Binding IdleTimeoutSeconds}"/>
 
-      <TextBlock Text="Імітація (мок-сервер)" FontWeight="Bold" Margin="0,10,0,3"/>
-      <Grid>
-         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="120"/>
-         </Grid.ColumnDefinitions>
-         <Grid.RowDefinitions >
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-         </Grid.RowDefinitions>
+               <TextBlock Grid.Row="1" Grid.Column="0" Text="Пауза реконекту, с" VerticalAlignment="Center" Margin="0,3"/>
+               <ctrl:NumericSpinner Grid.Row="1" Grid.Column="1" Margin="0,3" Step="5" Minimum="1" Value="{Binding ReconnectDelaySeconds}"/>
 
-         <TextBlock Grid.Row="0" Text="Інтервал видачі, мс" VerticalAlignment="Center" Margin="0,3"/>
-         <ctrl:NumericSpinner Grid.Row="0" Grid.Column="1" Margin="0,0" Step="100" Minimum="10" Value="{Binding SendIntervalMs}"/>
+               <TextBlock Grid.Row="2" Grid.Column="0" Text="Таймаут підключення, с" VerticalAlignment="Center" Margin="0,3"/>
+               <ctrl:NumericSpinner Grid.Row="2" Grid.Column="1" Margin="0,3" Step="5" Minimum="1" Value="{Binding ConnectTimeoutSeconds}"/>
+            </Grid>
 
-         <TextBlock Grid.Row="1" Grid.Column="0" Text="Ймовірність битого кадру" VerticalAlignment="Center" Margin="0,3"/>
-         <ctrl:NumericSpinner Grid.Row="1" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding MalformedFrameProbability}"/>
+            <TextBlock Text="Імітація (мок-сервер)" FontWeight="Bold" Margin="0,10,0,3"/>
+            <Grid>
+               <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="120"/>
+               </Grid.ColumnDefinitions>
+               <Grid.RowDefinitions >
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+               </Grid.RowDefinitions>
 
-         <TextBlock Grid.Row="2" Grid.Column="0" Text="Ймовірність чужого control" VerticalAlignment="Center" Margin="0,3"/>
-         <ctrl:NumericSpinner Grid.Row="2" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding UnknownControlProbability}"/>
+               <TextBlock Grid.Row="0" Text="Інтервал видачі, мс" VerticalAlignment="Center" Margin="0,3"/>
+               <ctrl:NumericSpinner Grid.Row="0" Grid.Column="1" Margin="0,3" Step="100" Minimum="10" Value="{Binding SendIntervalMs}"/>
 
-         <TextBlock Grid.Row="3" Grid.Column="0" Text="Ймовірність обриву" VerticalAlignment="Center" Margin="0,3"/>
-         <ctrl:NumericSpinner Grid.Row="3" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding DropProbability}"/>
-      </Grid>
+               <TextBlock Grid.Row="1" Grid.Column="0" Text="Ймовірність битого кадру" VerticalAlignment="Center" Margin="0,3"/>
+               <ctrl:NumericSpinner Grid.Row="1" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding MalformedFrameProbability}"/>
 
-      <TextBlock Text="Таблиця" FontWeight="Bold" Margin="0,14,0,3"/>
-      <CheckBox Content="Показувати медіану частоти"
-                IsChecked="{Binding UseMedianFrequency}"
-                ToolTip="Інакше - за першим сигналом"
-                />
+               <TextBlock Grid.Row="2" Grid.Column="0" Text="Ймовірність чужого control" VerticalAlignment="Center" Margin="0,3"/>
+               <ctrl:NumericSpinner Grid.Row="2" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding UnknownControlProbability}"/>
 
-      <TextBlock Text="Консоль" FontWeight="Bold" Margin="0,14,0,3"/>
-      <CheckBox Content="Показувати консоль логів (нижня панель)"
-                IsChecked="{Binding ShowConsole}"/>
+               <TextBlock Grid.Row="3" Grid.Column="0" Text="Ймовірність обриву" VerticalAlignment="Center" Margin="0,3"/>
+               <ctrl:NumericSpinner Grid.Row="3" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding DropProbability}"/>
+            </Grid>
 
-      <TextBlock Text="Сховище" FontWeight="Bold" Margin="0,14,0,3"/>
-      <CheckBox Content="Зберігати лише в пам'яті (без файлу БД SQLite)"
-                IsChecked="{Binding UseInMemoryStorage}"/>
+            <TextBlock Text="Таблиця" FontWeight="Bold" Margin="0,14,0,3"/>
+            <CheckBox Content="Показувати медіану частоти"
+                      IsChecked="{Binding UseMedianFrequency}"
+                      ToolTip="Інакше - за першим сигналом"
+                      />
 
-      <CheckBox Content="Ховати основне вікно під час запуску" Margin="0,14"
-                IsChecked="{Binding HideMainWindowOnStartup}"
-                ToolTip=" 'Тихий' Старт в треї"
-                />
+            <TextBlock Text="Консоль" FontWeight="Bold" Margin="0,14,0,3"/>
+            <CheckBox Content="Показувати консоль логів (нижня панель)"
+                      IsChecked="{Binding ShowConsole}"/>
 
-      <TextBlock Text="Тема" FontWeight="Bold" Margin="0,14,0,3"/>
-      <ComboBox ItemsSource="{Binding ThemeOptions}" DisplayMemberPath="Display"
-                SelectedValuePath="Value" SelectedValue="{Binding Theme}"
-                HorizontalAlignment="Stretch"/>
+            <TextBlock Text="Сховище" FontWeight="Bold" Margin="0,14,0,3"/>
+            <CheckBox Content="Зберігати лише в пам'яті (без файлу БД SQLite)"
+                      IsChecked="{Binding UseInMemoryStorage}"/>
 
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-         <ui:Button Content="Зберегти"  Width="90" Appearance="Primary" IsDefault="True" Click="OnSave" Margin="0,0,8,0"/>
-         <ui:Button Content="Скасувати" Width="90" IsCancel="True"/>
-      </StackPanel>
+            <CheckBox Content="Ховати основне вікно під час запуску" Margin="0,14"
+                      IsChecked="{Binding HideMainWindowOnStartup}"
+                      ToolTip=" 'Тихий' Старт в треї"
+                      />
 
-   </StackPanel>
+            <TextBlock Text="Тема" FontWeight="Bold" Margin="0,14,0,3"/>
+            <ComboBox ItemsSource="{Binding ThemeOptions}" DisplayMemberPath="Display"
+                      SelectedValuePath="Value" SelectedValue="{Binding Theme}"
+                      HorizontalAlignment="Stretch"/>
+
+         </StackPanel>
+      </ScrollViewer>
+
+   </DockPanel>
 </Window>
