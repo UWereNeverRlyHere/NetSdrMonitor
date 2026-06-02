@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/Items/">
+    <File Path="install/build-installer.ps1" />
+    <File Path="install/setup.iss" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Libraries/">
