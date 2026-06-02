@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Interop;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Desktop.Theming;
 
@@ -35,7 +36,15 @@ public partial class SettingsWindow : Window
          return;
       }
 
-      var dialog = new SettingsWindow(current, store) { Owner = owner };
+      var dialog = new SettingsWindow(current, store);
+
+      // Owner призначаємо лише якщо головне вікно вже показували: непоказане вікно ще без HWND,
+      // і WPF кине InvalidOperationException. Без власника — центруємо діалог по екрану.
+      if (owner is not null && new WindowInteropHelper(owner).Handle != IntPtr.Zero)
+         dialog.Owner = owner;
+      else
+         dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
       _open = dialog;
       try
       {
