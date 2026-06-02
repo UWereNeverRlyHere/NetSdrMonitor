@@ -11,6 +11,13 @@ public sealed record AppSettings
    public SdrMonitorOptions Monitor { get; init; } = new();
    public MockSignalServerOptions Mock { get; init; } = new();
    public bool HideMainWindowOnStartup { get; init; }
+
+   // летке сховище за замовчуванням: файл БД не створюється, поки користувач не обере SQLite
+   public bool UseInMemoryStorage { get; init; } = true;
+
+   // частоту показуємо як медіану детекцій запису (інакше — за першим сигналом)
+   public bool UseMedianFrequency { get; init; } = true;
+
    public IReadOnlyList<ColumnSetting> Columns { get; init; } = [];
 }
 

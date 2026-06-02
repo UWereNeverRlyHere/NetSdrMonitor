@@ -1,20 +1,31 @@
-﻿using System.Windows;
+using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using NetSdrMonitor.Core.Abstractions.Persistence;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Desktop.Shell;
+using NetSdrMonitor.Infrastructure.Persistence.Sqlite;
 
 namespace NetSdrMonitor.Desktop;
 
 public partial class App : Application
 {
+   private ServiceProvider? _services;
    private SimulationController? _simulation;
 
    protected override async void OnStartup(StartupEventArgs e)
    {
       base.OnStartup(e);
 
+      // мінімальний композиційний корінь: лише реєстрація сховища (фабрика контексту + бутстрапер + фабрика порту).
+      // Конкретику (EF/SQLite) знає тільки тут — решта застосунку бачить лише порт.
+      var collection = new ServiceCollection();
+      collection.AddSqliteSignalStorage();
+      _services = collection.BuildServiceProvider();
+      var repositoryFactory = _services.GetRequiredService<ISignalRecordRepositoryFactory>();
+
       var store = new JsonSettingsStore();
       AppSettings settings = store.Load();
-      _simulation = new SimulationController(settings);
+      _simulation = new SimulationController(settings, repositoryFactory);
 
       var main = new MainWindow(_simulation, store);
       MainWindow = main;
@@ -31,6 +42,10 @@ public partial class App : Application
    {
       if (_simulation is not null)
          await _simulation.DisposeAsync();
+
+      if (_services is not null)
+         await _services.DisposeAsync();
+
       base.OnExit(e);
    }
 }

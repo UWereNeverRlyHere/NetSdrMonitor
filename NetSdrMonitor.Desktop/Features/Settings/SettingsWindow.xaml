@@ -55,6 +55,14 @@
          <ctrl:NumericSpinner Grid.Row="3" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding DropProbability}"/>
       </Grid>
 
+      <TextBlock Text="Таблиця" FontWeight="Bold" Margin="0,14,0,6"/>
+      <CheckBox Content="Показувати медіану частоти (інакше — за першим сигналом)"
+                IsChecked="{Binding UseMedianFrequency}"/>
+
+      <TextBlock Text="Сховище" FontWeight="Bold" Margin="0,14,0,6"/>
+      <CheckBox Content="Зберігати лише в пам'яті (без файлу БД SQLite)"
+                IsChecked="{Binding UseInMemoryStorage}"/>
+
       <CheckBox Content="Ховати основне вікно під час запуску" Margin="0,14"
                 IsChecked="{Binding HideMainWindowOnStartup}"/>
 

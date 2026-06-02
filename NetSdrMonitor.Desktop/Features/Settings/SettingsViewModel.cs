@@ -16,6 +16,8 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
    [ObservableProperty] private double _unknownControlProbability = source.Mock.UnknownControlProbability;
    [ObservableProperty] private double _dropProbability = source.Mock.DropProbability;
    [ObservableProperty] private bool   _hideMainWindowOnStartup = source.HideMainWindowOnStartup;
+   [ObservableProperty] private bool   _useInMemoryStorage = source.UseInMemoryStorage;
+   [ObservableProperty] private bool   _useMedianFrequency = source.UseMedianFrequency;
 
    /// <summary>
    /// Збирає оновлені налаштування з полів, зберігаючи решту значень джерела.
@@ -36,5 +38,7 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
                DropProbability           = DropProbability,
          },
          HideMainWindowOnStartup = HideMainWindowOnStartup,
+         UseInMemoryStorage      = UseInMemoryStorage,
+         UseMedianFrequency      = UseMedianFrequency,
    };
 }

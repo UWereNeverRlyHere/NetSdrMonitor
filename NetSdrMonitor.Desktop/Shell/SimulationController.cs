@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NetSdrMonitor.Communication.Monitor;
 using NetSdrMonitor.Communication.Server;
 using NetSdrMonitor.Core.Abstractions.Communication;
+using NetSdrMonitor.Core.Abstractions.Persistence;
+using NetSdrMonitor.Desktop.Features.Monitor;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Domain.Signals;
 
@@ -12,10 +14,11 @@ namespace NetSdrMonitor.Desktop.Shell;
 
 /// <summary>
 /// Глобальний контекст застосунку: володіє монітором і моком, керує імітацією (старт/стоп),
-/// віддає в UI стан з'єднання та лічильник прийнятих сигналів. Один екземпляр на застосунок.
+/// віддає в UI стан з'єднання, лічильник сигналів і таблицю агрегованих записів. Один екземпляр на застосунок.
 /// </summary>
 public sealed partial class SimulationController : ObservableObject, IAsyncDisposable
 {
+   private readonly ISignalRecordRepositoryFactory _repositoryFactory;
    private readonly SynchronizationContext _ui;
    private readonly DispatcherTimer _uiTimer;
 
@@ -35,10 +38,11 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
    [ObservableProperty]
    private long _signalCount;
 
-   public SimulationController(AppSettings settings)
+   public SimulationController(AppSettings settings, ISignalRecordRepositoryFactory repositoryFactory)
    {
-      _settings = settings;
-      _ui       = SynchronizationContext.Current ?? new SynchronizationContext();
+      _settings          = settings;
+      _repositoryFactory = repositoryFactory;
+      _ui                = SynchronizationContext.Current ?? new SynchronizationContext();
       _uiTimer = new DispatcherTimer
       {
             Interval = TimeSpan.FromMilliseconds(250)
@@ -46,15 +50,22 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
       _uiTimer.Tick += (_, _) => SignalCount = Interlocked.Read(ref _received);
    }
 
+   /// <summary>
+   /// Таблиця агрегованих записів (джерело даних гріда головного вікна).
+   /// </summary>
+   public MonitorViewModel Table { get; } = new();
+
    public string ToggleLabel => IsRunning ? "Зупинити імітацію" : "Розпочати імітацію";
 
    /// <summary>
    /// Запам'ятовує нові налаштування; якщо імітація триває — перезапускає її, щоб одразу
-   /// застосувати опції монітора й генератора.
+   /// застосувати опції монітора, генератора та обране сховище.
    /// </summary>
    public async Task UpdateSettingsAsync(AppSettings settings)
    {
       _settings = settings;
+      Table.UseMedian = settings.UseMedianFrequency; // заголовок/режим колонки оновлюємо одразу
+
       if (!IsRunning)
          return;
 
@@ -62,10 +73,17 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
       await StartAsync();
    }
 
-   public Task StartAsync()
+   public async Task StartAsync()
    {
       if (IsRunning)
-         return Task.CompletedTask;
+         return;
+
+      // режим частоти з налаштувань ставимо ДО завантаження історії — щоб рядки одразу були в потрібному режимі
+      Table.UseMedian = _settings.UseMedianFrequency;
+
+      // сховище під поточну галочку: летке в пам'яті або файлове SQLite (із гарантованою схемою)
+      ISignalRecordRepository repository = await _repositoryFactory.CreateAsync(_settings.UseInMemoryStorage);
+      await Table.BeginAsync(repository);
 
       // свіжі мок + монітор під поточні налаштування
       var generator = new RandomSignalGenerator();
@@ -77,12 +95,11 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
       Interlocked.Exchange(ref _received, 0);
       SignalCount = 0;
       _drainCts   = new CancellationTokenSource();
-      _           = DrainAsync(_monitor, _drainCts.Token); // тримаємо канал порожнім і рахуємо
+      _           = DrainAsync(_monitor, _drainCts.Token); // тримаємо канал порожнім: рахуємо й годуємо таблицю
 
       _monitor.Start();
       IsRunning = true;
       _uiTimer.Start();
-      return Task.CompletedTask;
    }
 
    public async Task StopAsync()
@@ -101,6 +118,8 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
          _monitor = null;
       }
 
+      await Table.EndAsync(); // дорозбирає чергу, закриває останній запис і чекає запис у сховище
+
       _factory   = null;
       IsRunning  = false;
       StatusText = "Зупинено";
@@ -108,14 +127,47 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
 
    public Task ToggleAsync() => IsRunning ? StopAsync() : StartAsync();
 
+   /// <summary>
+   /// Очищає журнал «по-чесному»: зупиняє сесію, прибирає сховище й перезапускає мок-сервер.
+   /// Так лічильник сигналів і таблиця стартують з нуля синхронно (без розбіжності «лічильник vs рядки»).
+   /// </summary>
+   public async Task ClearJournalAsync()
+   {
+      bool wasRunning = IsRunning;
+      if (wasRunning)
+         await StopAsync(); // закриває останній запис у сховище; далі його ж і чистимо
+
+      // для файлового SQLite треба явно спорожнити той самий файл (історію читаємо при старті);
+      // летке сховище нова сесія і так створює порожнім, тож зайвий екземпляр не чіпаємо
+      if (!_settings.UseInMemoryStorage)
+      {
+         ISignalRecordRepository persistent = await _repositoryFactory.CreateAsync(inMemory: false);
+         await persistent.ClearAsync();
+      }
+
+      if (wasRunning)
+      {
+         await StartAsync(); // свіжий лічильник + перезапуск мока + порожня історія
+      }
+      else
+      {
+         await Table.ClearAsync();
+         Interlocked.Exchange(ref _received, 0);
+         SignalCount = 0; // лічильник і таблиця лишаються синхронними навіть у зупиненому стані
+      }
+   }
+
    public async ValueTask DisposeAsync() => await StopAsync();
 
    private async Task DrainAsync(ISdrMonitor monitor, CancellationToken ct)
    {
       try
       {
-         await foreach (Signal _ in monitor.Signals(ct))
+         await foreach (Signal signal in monitor.Signals(ct))
+         {
             Interlocked.Increment(ref _received);
+            Table.Submit(signal); // черга потокобезпечна; розбір — на UI-таймері таблиці
+         }
       }
       catch (OperationCanceledException)
       {

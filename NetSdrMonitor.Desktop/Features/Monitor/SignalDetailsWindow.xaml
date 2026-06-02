@@ -1,0 +1,45 @@
+<Window x:Class="NetSdrMonitor.Desktop.Features.Monitor.SignalDetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Сигнали запису" Height="420" Width="560"
+        Background="#FAFAFB" TextElement.Foreground="#1F2430" FontSize="14"
+        Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <Style x:Key="NumCell" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="SummaryText" Grid.Row="0" Margin="2,0,2,8" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+        <DataGrid x:Name="DetailsGrid" Grid.Row="1"
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                  CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
+                  SelectionMode="Single" SelectionUnit="FullRow"
+                  GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                  RowBackground="White" AlternatingRowBackground="#F6F7F9"
+                  BorderThickness="1" BorderBrush="#DADCE2" Background="White" FontSize="14">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Час" Width="130"
+                                    Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}" />
+                <DataGridTextColumn Header="Частота, МГц" Width="130"
+                                    Binding="{Binding FrequencyMhz, StringFormat='{}{0:F3}'}"
+                                    ElementStyle="{StaticResource NumCell}" />
+                <DataGridTextColumn Header="Смуга, кГц" Width="110"
+                                    Binding="{Binding BandwidthKhz, StringFormat='{}{0:F1}'}"
+                                    ElementStyle="{StaticResource NumCell}" />
+                <DataGridTextColumn Header="SNR, дБ" Width="*"
+                                    Binding="{Binding SnrDb, StringFormat='{}{0:F1}'}"
+                                    ElementStyle="{StaticResource NumCell}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
