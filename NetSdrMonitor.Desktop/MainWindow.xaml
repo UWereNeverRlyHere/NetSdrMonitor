@@ -27,7 +27,10 @@
         <!-- власна плашка заголовка: це елемент контенту, тож назва вікна повністю керована (а не системний каптіон) -->
         <ui:TitleBar DockPanel.Dock="Top" Title="NetSdrMonitor"
                      Background="{DynamicResource ApplicationBackgroundBrush}"
-                     Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                     MinHeight="25"
+                     Height="28"
+                     MaxHeight="35">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="/Assets/Icons/app.ico" />
             </ui:TitleBar.Icon>
