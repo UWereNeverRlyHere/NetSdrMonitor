@@ -8,7 +8,7 @@
 
 #define MyAppName        "NetSdrMonitor"
 #define MyAppVersion     "1.0.0"
-#define MyAppPublisher   "Volodymyr"
+#define MyAppPublisher   "u_were_never_rly_here"
 #define MyAppExeName     "NetSdrMonitor.Desktop.exe"
 
 [Setup]
