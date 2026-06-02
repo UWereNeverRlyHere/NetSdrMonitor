@@ -1,6 +1,6 @@
-using System.Buffers;
+﻿using System.Buffers;
 
-namespace NetSdrMonitor.Application.Abstractions.Communication;
+namespace NetSdrMonitor.Core.Abstractions.Communication;
 
 /// <summary>
 /// Дуплексний потік байтів між хостом і таргетом. Знає лише про байти -

@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net.Sockets;
-using NetSdrMonitor.Application.Abstractions.Communication;
+using NetSdrMonitor.Core.Abstractions.Communication;
 
 namespace NetSdrMonitor.Communication.Tcp;
 

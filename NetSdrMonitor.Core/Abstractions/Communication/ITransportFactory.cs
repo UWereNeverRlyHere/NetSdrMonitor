@@ -1,4 +1,4 @@
-namespace NetSdrMonitor.Application.Abstractions.Communication;
+﻿namespace NetSdrMonitor.Core.Abstractions.Communication;
 
 /// <summary>
 /// Створює транспорт для монітора. Монітор не знає конкретики (TCP/serial/mock) і не тримає

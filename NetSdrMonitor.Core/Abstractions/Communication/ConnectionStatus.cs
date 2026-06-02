@@ -1,4 +1,4 @@
-namespace NetSdrMonitor.Application.Abstractions.Communication;
+﻿namespace NetSdrMonitor.Core.Abstractions.Communication;
 
 /// <summary>
 /// Стан лінії монітора для відображення в UI. Прив'язки до транспорту немає — це погляд оркестратора.

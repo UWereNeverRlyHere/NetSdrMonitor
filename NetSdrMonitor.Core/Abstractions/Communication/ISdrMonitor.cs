@@ -1,6 +1,6 @@
-using NetSdrMonitor.Domain.Signals;
+﻿using NetSdrMonitor.Domain.Signals;
 
-namespace NetSdrMonitor.Application.Abstractions.Communication;
+namespace NetSdrMonitor.Core.Abstractions.Communication;
 
 /// <summary>
 /// Монітор однієї лінії NetSDR: володіє фоновою петлею з'єднання (Start/Stop), сам підключається

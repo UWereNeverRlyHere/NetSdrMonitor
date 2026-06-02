@@ -1,4 +1,4 @@
-namespace NetSdrMonitor.Application.Abstractions.Communication;
+﻿namespace NetSdrMonitor.Core.Abstractions.Communication;
 
 /// <summary>
 /// Імітатор таргета NetSDR - друга сторона. Приймає клієнтів,

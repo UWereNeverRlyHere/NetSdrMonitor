@@ -1,4 +1,4 @@
-using NetSdrMonitor.Application.Abstractions.Communication;
+using NetSdrMonitor.Core.Abstractions.Communication;
 using NetSdrMonitor.Communication.Tcp;
 
 namespace NetSdrMonitor.Communication.Server;

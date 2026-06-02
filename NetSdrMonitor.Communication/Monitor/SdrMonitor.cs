@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net.Sockets;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
-using NetSdrMonitor.Application.Abstractions.Communication;
+using NetSdrMonitor.Core.Abstractions.Communication;
 using NetSdrMonitor.Domain.Signals;
 using NetSdrMonitor.Protocol;
 using NetSdrMonitor.Protocol.Messages;
