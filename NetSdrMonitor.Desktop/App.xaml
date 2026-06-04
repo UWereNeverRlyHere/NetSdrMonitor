@@ -46,6 +46,15 @@
                 <Setter Property="RowBackground" Value="Transparent" />
                 <!-- напівпрозорий сірий: видно «шашку» і на світлій, і на темній темі (тема-незалежний) -->
                 <Setter Property="AlternatingRowBackground" Value="#22808080" />
+                <!-- заголовки по центру: успадковуємо САМЕ стиль заголовка WPF-UI (а не системний),
+                     інакше злітає тема; його шаблон центрує контент за HorizontalContentAlignment -->
+                <Setter Property="ColumnHeaderStyle">
+                    <Setter.Value>
+                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DefaultUiDataGridColumnHeaderStyle}">
+                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        </Style>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <!-- вирівнювання вмісту клітинок по центру (спільне для обох таблиць) -->
