@@ -156,7 +156,7 @@ public sealed partial class MonitorViewModel : ObservableObject
 
    private void OnRecordOpened(SignalRecord record)
    {
-      var row = new SignalRecordRow(record, CurrentMode);
+      var row = new SignalRecordRow(record, CurrentMode) { NeedFadeIn = true }; // новий рядок з'явиться з анімацією
       _openRow = row;
       Rows.Add(row);
    }

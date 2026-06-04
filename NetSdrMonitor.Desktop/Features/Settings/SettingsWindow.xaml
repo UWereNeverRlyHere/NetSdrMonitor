@@ -34,6 +34,7 @@
                 BorderThickness="0,1,0,0" Padding="12,10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <ui:Button Content="Зберегти" 
+                           Style="{StaticResource AppButton}"
                            Click="OnSave" IsDefault="True" 
                            Width="90" 
                            Appearance="Primary"

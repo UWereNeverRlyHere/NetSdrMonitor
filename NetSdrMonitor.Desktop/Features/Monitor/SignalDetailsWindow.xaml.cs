@@ -1,8 +1,7 @@
 using System.Globalization;
-using System.Linq;
-using System.Windows;
 using NetSdrMonitor.Desktop.Behaviors;
 using NetSdrMonitor.Desktop.Settings;
+using Wpf.Ui.Controls;
 
 namespace NetSdrMonitor.Desktop.Features.Monitor;
 
@@ -10,7 +9,7 @@ namespace NetSdrMonitor.Desktop.Features.Monitor;
 /// Вікно деталізації запису: показує всі сигнали, що злились у нього (джерело медіани),
 /// та підсумок із кількістю детекцій і медіаною частоти.
 /// </summary>
-public partial class SignalDetailsWindow : Wpf.Ui.Controls.FluentWindow
+public partial class SignalDetailsWindow : FluentWindow
 {
    public SignalDetailsWindow(SignalRecordRow row, JsonSettingsStore store)
    {

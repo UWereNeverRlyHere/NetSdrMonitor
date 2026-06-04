@@ -64,6 +64,12 @@ public sealed partial class SignalRecordRow : ObservableObject
    public IReadOnlyList<Signal> Signals => _record.Signals;
 
    /// <summary>
+   /// Прапорець разової анімації появи рядка: ставиться для нових (живих) записів і
+   /// гаситься після програвання. Історія, завантажена на старті, не анімується.
+   /// </summary>
+   public bool NeedFadeIn { get; set; }
+
+   /// <summary>
    /// Сповіщає UI про зміни після нової детекції (оновились медіана, лічильник, стан).
    /// </summary>
    public void Refresh()

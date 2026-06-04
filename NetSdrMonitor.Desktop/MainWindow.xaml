@@ -130,7 +130,8 @@
                       Background="{DynamicResource ApplicationBackgroundBrush}"
                       BorderThickness="0" FontSize="14"
                       PreviewMouseRightButtonDown="OnRowRightClick"
-                      Loaded="OnGridLoaded" ColumnReordered="OnColumnsChanged">
+                      Loaded="OnGridLoaded" ColumnReordered="OnColumnsChanged"
+                      LoadingRow="OnSignalsRowLoading">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Показати сигнали" Click="OnShowSignals" />
