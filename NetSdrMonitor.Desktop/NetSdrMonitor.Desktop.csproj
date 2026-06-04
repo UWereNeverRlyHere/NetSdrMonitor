@@ -8,6 +8,8 @@
         <UseWPF>true</UseWPF>
         <!-- маніфест вмикає Per-Monitor V2 DPI: коректний масштаб при переході між моніторами -->
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <!-- іконка вшивається в сам .exe: саме її показує кнопка на панелі задач Windows -->
+        <ApplicationIcon>Assets\Icons\app.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>

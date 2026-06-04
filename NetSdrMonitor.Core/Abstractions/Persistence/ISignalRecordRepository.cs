@@ -16,8 +16,20 @@ public interface ISignalRecordRepository
     /// <summary>
     /// Повертає знімок усіх збережених записів у порядку додавання.
     /// </summary>
-    // TODO(decide): для великої історії знадобиться пагінація/фільтр — уточнити сигнатуру під SQLite
     Task<IReadOnlyList<SignalRecord>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Повертає щонайбільше <paramref name="limit"/> найновіших записів — стартовий «хвіст» для таблиці.
+    /// </summary>
+    Task<IReadOnlyList<SignalRecord>> GetRecentAsync(int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Повертає всі записи, чий час першої детекції потрапляє в напіввідкритий проміжок [from; to).
+    /// </summary>
+    Task<IReadOnlyList<SignalRecord>> GetInRangeAsync(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Кількість збережених записів.

@@ -104,12 +104,23 @@
                 <CheckBox Content="Показувати медіану частоти"
                           IsChecked="{Binding UseMedianFrequency}"
                           ToolTip="Інакше - за першим сигналом" />
+            
 
                 <TextBlock Text="Консоль" FontWeight="Bold" Margin="0,14,0,3" />
                 <CheckBox Content="Показувати консоль логів (нижня панель)"
                           IsChecked="{Binding ShowConsole}" />
 
                 <TextBlock Text="Сховище" FontWeight="Bold" Margin="0,14,0,3" />
+                <Grid Margin="10,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="120" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Максимум записів" VerticalAlignment="Center" Margin="0,3"
+                               ToolTip="Скільки записів тримати на екрані. У режимі БД пошук за діапазоном дат показує всі записи попри цю межу." />
+                    <ctrl:NumericSpinner Grid.Column="1" Margin="0,3" IntegerOnly="True"
+                                         Step="100" Minimum="100" Value="{Binding MaxUiRecords}" />
+                </Grid>
                 <CheckBox Content="Зберігати лише в пам'яті (без файлу БД SQLite)"
                           IsChecked="{Binding UseInMemoryStorage}" />
 

@@ -11,9 +11,17 @@ public sealed class InMemorySignalRecordRepository : ISignalRecordRepository
 {
    private readonly Lock _gate = new();
    private readonly List<SignalRecord> _records = [];
+   private readonly int _capacity;
 
    /// <summary>
-   /// Додає запис у кінець списку.
+   /// Створює сховище з обмеженням на кількість записів: за переповнення найстаріші відкидаються,
+   /// тож пам'ять процесу лишається обмеженою (за замовчуванням — без обмеження).
+   /// </summary>
+   public InMemorySignalRecordRepository(int capacity = int.MaxValue) =>
+      _capacity = capacity > 0 ? capacity : int.MaxValue;
+
+   /// <summary>
+   /// Додає запис у кінець списку, відкидаючи найстаріші понад місткість.
    /// </summary>
    public Task AddAsync(SignalRecord record, CancellationToken cancellationToken = default)
    {
@@ -21,7 +29,13 @@ public sealed class InMemorySignalRecordRepository : ISignalRecordRepository
       cancellationToken.ThrowIfCancellationRequested();
 
       lock (_gate)
+      {
          _records.Add(record);
+         // тримаємо лише останні _capacity: голова списку — найстаріші записи
+         int excess = _records.Count - _capacity;
+         if (excess > 0)
+            _records.RemoveRange(0, excess);
+      }
 
       return Task.CompletedTask;
    }
@@ -35,6 +49,41 @@ public sealed class InMemorySignalRecordRepository : ISignalRecordRepository
       
       lock (_gate)
          return Task.FromResult<IReadOnlyList<SignalRecord>>(_records.ToArray());
+   }
+
+   /// <summary>
+   /// Найновіші <paramref name="limit"/> записів (хвіст списку) — копією, безпечною поза локом.
+   /// </summary>
+   public Task<IReadOnlyList<SignalRecord>> GetRecentAsync(int limit, CancellationToken cancellationToken = default)
+   {
+      cancellationToken.ThrowIfCancellationRequested();
+      if (limit <= 0)
+         return Task.FromResult<IReadOnlyList<SignalRecord>>([]);
+
+      lock (_gate)
+      {
+         int skip = Math.Max(0, _records.Count - limit);
+         return Task.FromResult<IReadOnlyList<SignalRecord>>(_records.Skip(skip).ToArray());
+      }
+   }
+
+   /// <summary>
+   /// Записи, чий час першої детекції потрапляє в [from; to).
+   /// </summary>
+   public Task<IReadOnlyList<SignalRecord>> GetInRangeAsync(
+      DateTimeOffset fromInclusive,
+      DateTimeOffset toExclusive,
+      CancellationToken cancellationToken = default)
+   {
+      cancellationToken.ThrowIfCancellationRequested();
+
+      lock (_gate)
+      {
+         SignalRecord[] hit = _records
+            .Where(r => r.First.Timestamp >= fromInclusive && r.First.Timestamp < toExclusive)
+            .ToArray();
+         return Task.FromResult<IReadOnlyList<SignalRecord>>(hit);
+      }
    }
 
    /// <summary>

@@ -18,6 +18,7 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
    [ObservableProperty] private bool   _hideMainWindowOnStartup = source.HideMainWindowOnStartup;
    [ObservableProperty] private bool   _useInMemoryStorage = source.UseInMemoryStorage;
    [ObservableProperty] private bool   _useMedianFrequency = source.UseMedianFrequency;
+   [ObservableProperty] private int    _maxUiRecords = source.MaxUiRecords;
    [ObservableProperty] private bool   _showConsole = source.ShowConsole;
    [ObservableProperty] private AppTheme _theme = source.Theme;
 
@@ -52,6 +53,7 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
          HideMainWindowOnStartup = HideMainWindowOnStartup,
          UseInMemoryStorage      = UseInMemoryStorage,
          UseMedianFrequency      = UseMedianFrequency,
+         MaxUiRecords            = MaxUiRecords,
          ShowConsole             = ShowConsole,
          Theme                   = Theme,
    };

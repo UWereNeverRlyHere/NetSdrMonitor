@@ -13,10 +13,13 @@ public sealed class SignalRecordRepositoryFactory(
             IDbContextFactory<SignalRecordDbContext> contextFactory,
             SqliteBootstrapper                       bootstrapper) : ISignalRecordRepositoryFactory
 {
-    public async Task<ISignalRecordRepository> CreateAsync(bool inMemory, CancellationToken cancellationToken = default)
+    public async Task<ISignalRecordRepository> CreateAsync(
+        bool inMemory,
+        int inMemoryCapacity = int.MaxValue,
+        CancellationToken cancellationToken = default)
     {
         if (inMemory)
-            return new InMemorySignalRecordRepository();
+            return new InMemorySignalRecordRepository(inMemoryCapacity);
 
         await bootstrapper.EnsureCreatedAsync(cancellationToken);
         return new SqliteSignalRecordRepository(contextFactory);

@@ -1,0 +1,58 @@
+<UserControl x:Class="NetSdrMonitor.Desktop.Controls.TimePicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:ctrl="clr-namespace:NetSdrMonitor.Desktop.Controls"
+             x:Name="Root">
+
+    <!-- поле «год:хв» з випадним спінером годин/хвилин; порожньо — фільтр за часом вимкнено -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <ui:TextBox x:Name="Display" Grid.Column="0"
+                    PlaceholderText="год:хв"
+                    FontSize="14"
+                    VerticalContentAlignment="Center"
+                    PreviewTextInput="OnDisplayPreviewTextInput"
+                    DataObject.Pasting="OnDisplayPaste"
+                    Text="{Binding Text, ElementName=Root, UpdateSourceTrigger=PropertyChanged}" />
+
+        <!-- висота кнопки тягнеться під рядок, тож збігається з полем вводу за будь-якої теми -->
+        <ToggleButton x:Name="DropToggle" Grid.Column="1" Width="30" VerticalAlignment="Stretch"
+                      Margin="4,0,0,0" Padding="0"
+                      Cursor="Hand" ToolTip="Обрати час">
+            <TextBlock Text="&#xE121;" FontFamily="Segoe MDL2 Assets" FontSize="14" />
+        </ToggleButton>
+
+        <Popup Grid.Column="0" PlacementTarget="{Binding ElementName=Display}" Placement="Bottom"
+               StaysOpen="False" AllowsTransparency="True"
+               IsOpen="{Binding IsChecked, ElementName=DropToggle, Mode=TwoWay}">
+            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,4,0,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <StackPanel Margin="0,0,8,0">
+                            <TextBlock Text="Год" HorizontalAlignment="Center" Margin="0,0,0,2" />
+                            <ctrl:NumericSpinner Width="74" IntegerOnly="True"
+                                                 Minimum="0" Maximum="23" Step="1"
+                                                 Value="{Binding Hour, ElementName=Root, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Хв" HorizontalAlignment="Center" Margin="0,0,0,2" />
+                            <ctrl:NumericSpinner Width="74" IntegerOnly="True"
+                                                 Minimum="0" Maximum="59" Step="1"
+                                                 Value="{Binding Minute, ElementName=Root, Mode=TwoWay}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button Content="Скинути" Margin="0,10,0,0" HorizontalAlignment="Stretch"
+                            Style="{StaticResource AppButton}" Click="OnClear" />
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

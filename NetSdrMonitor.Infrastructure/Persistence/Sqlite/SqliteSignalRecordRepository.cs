@@ -44,6 +44,53 @@ public sealed class SqliteSignalRecordRepository(IDbContextFactory<SignalRecordD
     }
 
     /// <summary>
+    /// Найновіші <paramref name="limit"/> записів (визначаємо за спаданням ключа — порядком вставки).
+    /// </summary>
+    public async Task<IReadOnlyList<SignalRecord>> GetRecentAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        if (limit <= 0)
+            return [];
+
+        await using SignalRecordDbContext db = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        List<SignalRecordEntity> entities = await db.Records
+                                                    .AsNoTracking()
+                                                    .Include(r => r.Signals)
+                                                    .OrderByDescending(r => r.Id)
+                                                    .Take(limit)
+                                                    .ToListAsync(cancellationToken);
+
+        // повертаємо у хронологічному порядку (як GetAll); подання таблиці однак пересортує
+        entities.Reverse();
+        return Map(entities);
+    }
+
+    /// <summary>
+    /// Записи, чий перший сигнал потрапляє в [from; to). Фільтруємо за міткою часу нульового сигналу.
+    /// </summary>
+    public async Task<IReadOnlyList<SignalRecord>> GetInRangeAsync(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken cancellationToken = default)
+    {
+        long fromMs = fromInclusive.ToUnixTimeMilliseconds();
+        long toMs   = toExclusive.ToUnixTimeMilliseconds();
+
+        await using SignalRecordDbContext db = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        List<SignalRecordEntity> entities = await db.Records
+                                                    .AsNoTracking()
+                                                    .Include(r => r.Signals)
+                                                    .Where(r => r.Signals.Any(s => s.Ordinal == 0
+                                                                                   && s.TimestampUnixMs >= fromMs
+                                                                                   && s.TimestampUnixMs < toMs))
+                                                    .OrderBy(r => r.Id)
+                                                    .ToListAsync(cancellationToken);
+
+        return Map(entities);
+    }
+
+    /// <summary>
     /// Кількість збережених записів.
     /// </summary>
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
@@ -61,6 +108,15 @@ public sealed class SqliteSignalRecordRepository(IDbContextFactory<SignalRecordD
         // спершу дочірні рядки, потім батьківські — не покладаємось на режим зовнішніх ключів
         await db.Signals.ExecuteDeleteAsync(cancellationToken);
         await db.Records.ExecuteDeleteAsync(cancellationToken);
+    }
+
+    private static IReadOnlyList<SignalRecord> Map(List<SignalRecordEntity> entities)
+    {
+        var result = new List<SignalRecord>(entities.Count);
+        foreach (SignalRecordEntity entity in entities)
+            result.Add(ToDomain(entity));
+
+        return result;
     }
 
     private static SignalRecordEntity ToEntity(SignalRecord record)

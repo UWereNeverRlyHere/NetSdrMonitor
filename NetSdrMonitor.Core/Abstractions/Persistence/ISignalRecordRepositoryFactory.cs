@@ -7,8 +7,11 @@ namespace NetSdrMonitor.Core.Abstractions.Persistence;
 public interface ISignalRecordRepositoryFactory
 {
     /// <summary>
-    /// Повертає готове до роботи сховище: при inMemory=true — летке в пам'яті,
-    /// інакше — файлове SQLite з уже створеними файлом БД і схемою.
+    /// Повертає готове до роботи сховище: при inMemory=true — летке в пам'яті (обмежене
+    /// <paramref name="inMemoryCapacity"/> записами), інакше — файлове SQLite з уже створеними файлом БД і схемою.
     /// </summary>
-    Task<ISignalRecordRepository> CreateAsync(bool inMemory, CancellationToken cancellationToken = default);
+    Task<ISignalRecordRepository> CreateAsync(
+        bool inMemory,
+        int inMemoryCapacity = int.MaxValue,
+        CancellationToken cancellationToken = default);
 }

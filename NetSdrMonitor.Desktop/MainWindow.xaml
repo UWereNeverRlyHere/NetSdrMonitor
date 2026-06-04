@@ -18,6 +18,7 @@
     <ui:FluentWindow.Resources>
         <!-- проксі DataContext для заголовка колонки частоти (він поза візуальним деревом) -->
         <behaviors:BindingProxy x:Key="Proxy" Data="{Binding}" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </ui:FluentWindow.Resources>
 
     <DockPanel>
@@ -142,8 +143,8 @@
                                                  IntegerOnly="True" Minimum="0" Step="1"
                                                  Value="{Binding Table.MinSignalCount}" />
                             <TextBlock Text="Час ≥ (год:хв)" Margin="0,0,0,2" />
-                            <TextBox Margin="0,0,0,10"
-                                     Text="{Binding Table.MinTimeText, UpdateSourceTrigger=PropertyChanged}" />
+                            <ctrl:TimePicker Margin="0,0,0,10"
+                                             Text="{Binding Table.MinTimeText, Mode=TwoWay}" />
 
                             <TextBlock Text="Дата з" Margin="0,0,0,2" />
                             <DatePicker Margin="0,0,0,10" SelectedDate="{Binding Table.FromDate, Mode=TwoWay}" />
@@ -212,6 +213,13 @@
                                         ElementStyle="{StaticResource CellCenter}" />
                 </DataGrid.Columns>
             </DataGrid>
+
+            <!-- індикатор зайнятості: накриває таблицю під час перезавантаження набору з БД -->
+            <Border Grid.Column="1" Background="#33000000"
+                    Visibility="{Binding Table.IsLoading, Converter={StaticResource BoolToVis}}">
+                <ui:ProgressRing IsIndeterminate="True" Width="48" Height="48"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
             </Grid>
 
             <!-- роздільник між таблицею та консоллю: тягнемо мишею, висота запам'ятовується -->

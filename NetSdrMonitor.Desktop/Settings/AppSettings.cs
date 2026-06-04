@@ -30,6 +30,10 @@ public sealed record AppSettings
     // частоту показуємо як медіану детекцій запису (інакше — за першим сигналом)
     public bool UseMedianFrequency { get; init; } = true;
 
+    // максимум записів на екрані: для пам'яті — жорстка межа (старі відкидаються), для БД —
+    // розмір стартового «хвоста» (пошук за діапазоном дат цю межу не застосовує)
+    public int MaxUiRecords { get; init; } = 500;
+
     // нижня консоль логів: показувати й яку висоту (px) їй відвести (0 — узяти типову)
     public bool ShowConsole { get; init; } = true;
     public double ConsoleHeight { get; init; }

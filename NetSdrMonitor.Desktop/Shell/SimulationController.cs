@@ -80,9 +80,10 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
     /// </summary>
     public async Task UpdateSettingsAsync(AppSettings settings)
     {
-        _settings       = settings;
-        Table.UseMedian = settings.UseMedianFrequency; // заголовок/режим колонки оновлюємо одразу
-        ShowConsole     = settings.ShowConsole;        // показ консолі застосовуємо без перезапуску
+        _settings        = settings;
+        Table.UseMedian  = settings.UseMedianFrequency; // заголовок/режим колонки оновлюємо одразу
+        Table.MaxRecords = settings.MaxUiRecords;       // межу таблиці застосовуємо одразу
+        ShowConsole      = settings.ShowConsole;        // показ консолі застосовуємо без перезапуску
 
         if (!IsRunning)
             return;
@@ -99,9 +100,9 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
         // режим частоти з налаштувань ставимо ДО завантаження історії — щоб рядки одразу були в потрібному режимі
         Table.UseMedian = _settings.UseMedianFrequency;
 
-        // сховище під поточну галочку: летке в пам'яті або файлове SQLite (із гарантованою схемою)
-        ISignalRecordRepository repository = await _repositoryFactory.CreateAsync(_settings.UseInMemoryStorage);
-        await Table.BeginAsync(repository);
+        // сховище під поточну галочку: летке в пам'яті (обмежене лімітом) або файлове SQLite (із гарантованою схемою)
+        ISignalRecordRepository repository = await _repositoryFactory.CreateAsync(_settings.UseInMemoryStorage, _settings.MaxUiRecords);
+        await Table.BeginAsync(repository, persistent: !_settings.UseInMemoryStorage, _settings.MaxUiRecords);
 
         // свіжі мок + монітор під поточні налаштування
         var generator = new RandomSignalGenerator();
