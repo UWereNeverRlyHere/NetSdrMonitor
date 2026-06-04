@@ -11,13 +11,6 @@
         TextElement.Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="14"
         Icon="/Assets/Icons/app.ico" WindowStartupLocation="CenterOwner">
 
-    <ui:FluentWindow.Resources>
-        <Style x:Key="NumCell" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right" />
-            <Setter Property="Margin" Value="0,0,10,0" />
-        </Style>
-    </ui:FluentWindow.Resources>
-
     <DockPanel>
 
         <!-- власна плашка заголовка: єдиний стиль шапки з головним вікном -->
@@ -39,6 +32,7 @@
         <TextBlock x:Name="SummaryText" Grid.Row="0" Margin="2,0,2,8" FontWeight="SemiBold" TextWrapping="Wrap" />
 
         <DataGrid x:Name="DetailsGrid" Grid.Row="1"
+                  Style="{StaticResource AppDataGrid}"
                   AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                   CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
                   SelectionMode="Single" SelectionUnit="FullRow"
@@ -46,16 +40,17 @@
                   BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" FontSize="14">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Час" Width="130"
-                                    Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}" />
+                                    Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}"
+                                    ElementStyle="{StaticResource CellCenter}" />
                 <DataGridTextColumn Header="Частота, МГц" Width="130"
                                     Binding="{Binding FrequencyMhz, StringFormat='{}{0:F3}'}"
-                                    ElementStyle="{StaticResource NumCell}" />
+                                    ElementStyle="{StaticResource CellCenter}" />
                 <DataGridTextColumn Header="Смуга, кГц" Width="110"
                                     Binding="{Binding BandwidthKhz, StringFormat='{}{0:F1}'}"
-                                    ElementStyle="{StaticResource NumCell}" />
+                                    ElementStyle="{StaticResource CellCenter}" />
                 <DataGridTextColumn Header="SNR, дБ" Width="*"
                                     Binding="{Binding SnrDb, StringFormat='{}{0:F1}'}"
-                                    ElementStyle="{StaticResource NumCell}" />
+                                    ElementStyle="{StaticResource CellCenter}" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

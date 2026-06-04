@@ -18,12 +18,6 @@
     <ui:FluentWindow.Resources>
         <!-- проксі DataContext для заголовка колонки частоти (він поза візуальним деревом) -->
         <behaviors:BindingProxy x:Key="Proxy" Data="{Binding}" />
-
-        <!-- вирівнювання числових колонок праворуч -->
-        <Style x:Key="NumCell" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right" />
-            <Setter Property="Margin" Value="0,0,10,0" />
-        </Style>
     </ui:FluentWindow.Resources>
 
     <DockPanel>
@@ -102,7 +96,19 @@
                     <ctrl:NumericSpinner DockPanel.Dock="Left" Width="64" Height="32" VerticalAlignment="Center"
                                          IntegerOnly="True" Minimum="0" Step="1" Value="{Binding Table.MinSignalCount}" />
 
-                    <Button DockPanel.Dock="Right" Content="Очистити журнал" 
+                    <!-- фільтр за датою: діапазон С/По (календарик) + швидкий «Сьогодні» -->
+                    <TextBlock DockPanel.Dock="Left" Text="Дата:" VerticalAlignment="Center" Margin="16,0,6,0" />
+                    <DatePicker DockPanel.Dock="Left" Width="120" VerticalAlignment="Center"
+                                SelectedDate="{Binding Table.FromDate, Mode=TwoWay}" />
+                    <TextBlock DockPanel.Dock="Left" Text="—" VerticalAlignment="Center" Margin="4,0" />
+                    <DatePicker DockPanel.Dock="Left" Width="120" VerticalAlignment="Center"
+                                SelectedDate="{Binding Table.ToDate, Mode=TwoWay}" />
+                    <Button DockPanel.Dock="Left" Content="Сьогодні"
+                            Command="{Binding Table.TodayCommand}"
+                            Style="{StaticResource AppButton}"
+                            Height="32" Padding="10,3" Margin="6,0,0,0" />
+
+                    <Button DockPanel.Dock="Right" Content="Очистити журнал"
                             Click="OnClearLog" 
                             Style="{StaticResource AppButton}"
                             Height="32" Padding="10,3" Margin="8,0,0,0" />
@@ -115,6 +121,7 @@
 
             <!-- таблиця агрегованих записів: заголовки, виділення й чергування рядків бере тема WPF-UI -->
             <DataGrid x:Name="SignalsGrid" Grid.Row="2"
+                      Style="{StaticResource AppDataGrid}"
                       ItemsSource="{Binding Table.RowsView}"
                       AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                       CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
@@ -130,21 +137,27 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="date" Header="Дата" Width="100"
+                                        Binding="{Binding Time, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                        ElementStyle="{StaticResource CellCenter}" />
+                    <!-- SortDirection лише показує стрілку в заголовку; саме сортування тримає RowsView -->
                     <DataGridTextColumn behaviors:ColumnLayout.Key="time" Header="Час" Width="120"
-                                        Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}" />
+                                        SortDirection="Descending"
+                                        Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}"
+                                        ElementStyle="{StaticResource CellCenter}" />
                     <DataGridTextColumn behaviors:ColumnLayout.Key="freq" Width="130"
                                         Header="{Binding Data.Table.FrequencyColumnTitle, Source={StaticResource Proxy}}"
                                         Binding="{Binding FrequencyMhz, StringFormat='{}{0:F3}'}"
-                                        ElementStyle="{StaticResource NumCell}" />
+                                        ElementStyle="{StaticResource CellCenter}" />
                     <DataGridTextColumn behaviors:ColumnLayout.Key="bw" Header="Смуга, кГц" Width="110"
                                         Binding="{Binding BandwidthKhz, StringFormat='{}{0:F1}'}"
-                                        ElementStyle="{StaticResource NumCell}" />
+                                        ElementStyle="{StaticResource CellCenter}" />
                     <DataGridTextColumn behaviors:ColumnLayout.Key="snr" Header="SNR, дБ" Width="90"
                                         Binding="{Binding SnrDb, StringFormat='{}{0:F1}'}"
-                                        ElementStyle="{StaticResource NumCell}" />
+                                        ElementStyle="{StaticResource CellCenter}" />
                     <DataGridTextColumn behaviors:ColumnLayout.Key="count" Header="Сигналів" Width="90"
                                         Binding="{Binding Count}"
-                                        ElementStyle="{StaticResource NumCell}" />
+                                        ElementStyle="{StaticResource CellCenter}" />
                 </DataGrid.Columns>
             </DataGrid>
 

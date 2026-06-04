@@ -104,6 +104,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _simulation.Table.SearchText     = string.Empty;
         _simulation.Table.MinSnrDb       = 0;
         _simulation.Table.MinSignalCount = 0;
+        _simulation.Table.FromDate       = null;
+        _simulation.Table.ToDate         = null;
     }
 
     private void OnGridLoaded(object sender, RoutedEventArgs e)

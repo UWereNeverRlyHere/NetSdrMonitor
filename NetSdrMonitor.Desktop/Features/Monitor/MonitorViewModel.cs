@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using NetSdrMonitor.Core.Abstractions.Persistence;
 using NetSdrMonitor.Domain.Aggregation;
 using NetSdrMonitor.Domain.Signals;
@@ -46,11 +47,21 @@ public sealed partial class MonitorViewModel : ObservableObject
    [ObservableProperty]
    private int _minSignalCount;
 
+   // межі фільтра за датою (за днем, включно); null — межа не задана
+   [ObservableProperty]
+   private DateTime? _fromDate;
+
+   [ObservableProperty]
+   private DateTime? _toDate;
+
    public MonitorViewModel()
    {
       Rows     = [];
       RowsView = CollectionViewSource.GetDefaultView(Rows);
       RowsView.Filter = FilterRow;
+
+      // за замовчуванням — найновіші зверху; клік по заголовку колонки переписує сортування
+      RowsView.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Time), ListSortDirection.Descending));
 
       _pump = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
       _pump.Tick += (_, _) => Drain();
@@ -189,6 +200,14 @@ public sealed partial class MonitorViewModel : ObservableObject
       if (row.SnrDb < MinSnrDb)
          return false;
 
+      // фільтр за датою — порівнюємо день запису з межами (включно з обома кінцями)
+      DateTime day = row.Time.Date;
+      if (FromDate is { } from && day < from.Date)
+         return false;
+
+      if (ToDate is { } to && day > to.Date)
+         return false;
+
       if (string.IsNullOrWhiteSpace(SearchText))
          return true;
 
@@ -212,4 +231,18 @@ public sealed partial class MonitorViewModel : ObservableObject
    partial void OnMinSnrDbChanged(double value) => RowsView.Refresh();
 
    partial void OnMinSignalCountChanged(int value) => RowsView.Refresh();
+
+   partial void OnFromDateChanged(DateTime? value) => RowsView.Refresh();
+
+   partial void OnToDateChanged(DateTime? value) => RowsView.Refresh();
+
+   /// <summary>
+   /// Швидкий вибір: показати лише записи за сьогодні.
+   /// </summary>
+   [RelayCommand]
+   private void Today()
+   {
+      FromDate = DateTime.Today;
+      ToDate   = DateTime.Today;
+   }
 }
