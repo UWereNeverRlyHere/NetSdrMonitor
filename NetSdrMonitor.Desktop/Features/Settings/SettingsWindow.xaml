@@ -116,7 +116,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="120" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Максимум записів" VerticalAlignment="Center" Margin="0,3"
+                    <TextBlock Grid.Column="0" Text="Максимум записів на екрані" VerticalAlignment="Center" Margin="0,3"
                                ToolTip="Скільки записів тримати на екрані. У режимі БД пошук за діапазоном дат показує всі записи попри цю межу." />
                     <ctrl:NumericSpinner Grid.Column="1" Margin="0,3" IntegerOnly="True"
                                          Step="100" Minimum="100" Value="{Binding MaxUiRecords}" />
