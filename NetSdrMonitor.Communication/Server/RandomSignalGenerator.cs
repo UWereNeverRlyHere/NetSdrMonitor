@@ -43,7 +43,7 @@ public sealed class RandomSignalGenerator
             Retune();
 
         // джитер у межах смуги => сигнал має шанс впасти в той самий запис, що й попередні
-        long half = _bandwidthHz / 2;
+        long half = _bandwidthHz / 4;
         long jitter = half > 0 ? _random.NextInt64(-half, half) : 0;
         var frequencyHz = (ulong)((long)_centerHz + jitter);
 

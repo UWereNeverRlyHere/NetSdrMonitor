@@ -110,6 +110,6 @@ public sealed class SignalRecord
    public void Close()
    {
       IsClosed = true;
-      _median  = null; // купи більше не потрібні — звільняємо ~4× пам'яті від обсягу частот
+      _median  = null; 
    }
 }
