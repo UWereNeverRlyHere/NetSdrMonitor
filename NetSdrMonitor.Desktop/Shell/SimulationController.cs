@@ -1,34 +1,25 @@
-using System.Net;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.Logging;
-using NetSdrMonitor.Communication.Monitor;
-using NetSdrMonitor.Communication.Server;
 using NetSdrMonitor.Core.Abstractions.Communication;
-using NetSdrMonitor.Core.Abstractions.Persistence;
+using NetSdrMonitor.Core.Features.Monitoring;
 using NetSdrMonitor.Desktop.Features.Console;
 using NetSdrMonitor.Desktop.Features.Monitor;
 using NetSdrMonitor.Desktop.Settings;
-using NetSdrMonitor.Domain.Signals;
 
 namespace NetSdrMonitor.Desktop.Shell;
 
 /// <summary>
-/// Глобальний контекст застосунку: володіє монітором і моком, керує імітацією (старт/стоп),
-/// віддає в UI стан з'єднання, лічильник сигналів і таблицю агрегованих записів. Один екземпляр на застосунок.
+/// Shell-модель головного вікна: керує сесією приймання (старт/стоп/очистка), віддає в UI стан лінії та
+/// лічильник сигналів і агрегує під-моделі — таблицю записів і консоль логів. Уся прикладна логіка
+/// (приймання, агрегація, персист, читання історії) живе в Core-сервісах; тут лише делегування й маршалінг.
 /// </summary>
 public sealed partial class SimulationController : ObservableObject, IAsyncDisposable
 {
-    private readonly ISignalRecordRepositoryFactory _repositoryFactory;
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly MonitoringService _monitoring;
     private readonly SynchronizationContext _ui;
     private readonly DispatcherTimer _uiTimer;
 
     private AppSettings _settings;
-    private SdrMonitor? _monitor;
-    private MockLoopbackTransportFactory? _factory;
-    private CancellationTokenSource? _drainCts;
-    private long _received; // пишеться з фонової задачі, читається таймером UI
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ToggleLabel))]
@@ -43,29 +34,28 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
     [ObservableProperty]
     private bool _showConsole;
 
-    public SimulationController(
-                AppSettings                    settings,
-                ISignalRecordRepositoryFactory repositoryFactory,
-                ILoggerFactory                 loggerFactory,
-                UiLogSink                      logSink)
+    public SimulationController(MonitoringService monitoring, MonitorViewModel table, ConsoleViewModel console, AppSettings settings)
     {
-        _settings          = settings;
-        _repositoryFactory = repositoryFactory;
-        _loggerFactory     = loggerFactory;
-        _showConsole       = settings.ShowConsole;
-        Console            = new ConsoleViewModel(logSink);
-        _ui                = SynchronizationContext.Current ?? new SynchronizationContext();
-        _uiTimer = new DispatcherTimer
-        {
-                    Interval = TimeSpan.FromMilliseconds(250)
-        };
-        _uiTimer.Tick += (_, _) => SignalCount = Interlocked.Read(ref _received);
+        _monitoring = monitoring;
+        _settings   = settings;
+        Table       = table;
+        Console     = console;
+
+        _showConsole     = settings.ShowConsole;
+        Table.UseMedian  = settings.UseMedianFrequency;
+        Table.MaxRecords = settings.MaxUiRecords;
+
+        _ui = SynchronizationContext.Current ?? new SynchronizationContext();
+        _monitoring.StatusChanged += OnStatusChanged;
+
+        _uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _uiTimer.Tick += (_, _) => SignalCount = _monitoring.ReceivedCount;
     }
 
     /// <summary>
     /// Таблиця агрегованих записів (джерело даних гріда головного вікна).
     /// </summary>
-    public MonitorViewModel Table { get; } = new();
+    public MonitorViewModel Table { get; }
 
     /// <summary>
     /// Консоль логів монітора й мок-сервера.
@@ -75,15 +65,15 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
     public string ToggleLabel => IsRunning ? "Зупинити імітацію" : "Розпочати імітацію";
 
     /// <summary>
-    /// Запам'ятовує нові налаштування; якщо імітація триває — перезапускає її, щоб одразу
-    /// застосувати опції монітора, генератора та обране сховище.
+    /// Запам'ятовує нові настройки; режим частоти й ліміт застосовуємо одразу, а якщо сесія триває —
+    /// перезапускаємо її, щоб підхопити опції монітора, генератора й обране сховище.
     /// </summary>
     public async Task UpdateSettingsAsync(AppSettings settings)
     {
         _settings        = settings;
-        Table.UseMedian  = settings.UseMedianFrequency; // заголовок/режим колонки оновлюємо одразу
-        Table.MaxRecords = settings.MaxUiRecords;       // межу таблиці застосовуємо одразу
-        ShowConsole      = settings.ShowConsole;        // показ консолі застосовуємо без перезапуску
+        Table.UseMedian  = settings.UseMedianFrequency;
+        Table.MaxRecords = settings.MaxUiRecords;
+        ShowConsole      = settings.ShowConsole;
 
         if (!IsRunning)
             return;
@@ -97,26 +87,9 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
         if (IsRunning)
             return;
 
-        // режим частоти з налаштувань ставимо ДО завантаження історії — щоб рядки одразу були в потрібному режимі
-        Table.UseMedian = _settings.UseMedianFrequency;
+        Table.UseMedian = _settings.UseMedianFrequency; // режим колонки — до завантаження стартового набору
+        await _monitoring.StartAsync();                 // підіймає сесію й сигналить таблиці перечитати набір
 
-        // сховище під поточну галочку: летке в пам'яті (обмежене лімітом) або файлове SQLite (із гарантованою схемою)
-        ISignalRecordRepository repository = await _repositoryFactory.CreateAsync(_settings.UseInMemoryStorage, _settings.MaxUiRecords);
-        await Table.BeginAsync(repository, persistent: !_settings.UseInMemoryStorage, _settings.MaxUiRecords);
-
-        // свіжі мок + монітор під поточні налаштування
-        var generator = new RandomSignalGenerator();
-        var mock = new MockSignalServer(new IPEndPoint(IPAddress.Loopback, 0), generator, _loggerFactory.CreateLogger<MockSignalServer>(), _settings.Mock);
-        _factory               =  new MockLoopbackTransportFactory(mock);
-        _monitor               =  new SdrMonitor(_loggerFactory.CreateLogger<SdrMonitor>(), _factory, _settings.Monitor);
-        _monitor.StatusChanged += OnStatusChanged;
-
-        Interlocked.Exchange(ref _received, 0);
-        SignalCount = 0;
-        _drainCts   = new CancellationTokenSource();
-        _           = DrainAsync(_monitor, _drainCts.Token); // тримаємо канал порожнім: рахуємо й годуємо таблицю
-
-        _monitor.Start();
         IsRunning = true;
         _uiTimer.Start();
     }
@@ -127,82 +100,48 @@ public sealed partial class SimulationController : ObservableObject, IAsyncDispo
             return;
 
         _uiTimer.Stop();
-        if (_drainCts is not null)
-            await _drainCts.CancelAsync();
+        await _monitoring.StopAsync();
 
-        if (_monitor is not null)
-        {
-            _monitor.StatusChanged -= OnStatusChanged;
-            await _monitor.DisposeAsync(); // гасить монітор і мок-сервер під ним
-            _monitor = null;
-        }
-
-        await Table.EndAsync(); // дорозбирає чергу, закриває останній запис і чекає запис у сховище
-
-        _factory   = null;
-        IsRunning  = false;
-        StatusText = "Зупинено";
+        SignalCount = _monitoring.ReceivedCount;
+        IsRunning   = false;
+        StatusText  = "Зупинено";
     }
 
     public Task ToggleAsync() => IsRunning ? StopAsync() : StartAsync();
 
     /// <summary>
-    /// Очищає журнал «по-чесному»: зупиняє сесію, прибирає сховище й перезапускає мок-сервер.
-    /// Так лічильник сигналів і таблиця стартують з нуля синхронно (без розбіжності «лічильник vs рядки»).
+    /// Очищає журнал «по-чесному»: зупиняє сесію, прибирає сховище й перезапускає (якщо була активна),
+    /// щоб лічильник і таблиця стартували з нуля синхронно.
     /// </summary>
     public async Task ClearJournalAsync()
     {
         bool wasRunning = IsRunning;
         if (wasRunning)
-            await StopAsync(); // закриває останній запис у сховище; далі його ж і чистимо
+            await StopAsync();
 
-        // для файлового SQLite треба явно спорожнити той самий файл (історію читаємо при старті);
-        // летке сховище нова сесія і так створює порожнім, тож зайвий екземпляр не чіпаємо
-        if (!_settings.UseInMemoryStorage)
-        {
-            ISignalRecordRepository persistent = await _repositoryFactory.CreateAsync(inMemory: false);
-            await persistent.ClearAsync();
-        }
+        await _monitoring.ClearAsync(); // чистить сховище сесії + сигналить таблиці перечитати порожньо
 
         if (wasRunning)
-        {
-            await StartAsync(); // свіжий лічильник + перезапуск мока + порожня історія
-        }
+            await StartAsync();
         else
-        {
-            await Table.ClearAsync();
-            Interlocked.Exchange(ref _received, 0);
-            SignalCount = 0; // лічильник і таблиця лишаються синхронними навіть у зупиненому стані
-        }
+            SignalCount = 0;
     }
 
-    public async ValueTask DisposeAsync() => await StopAsync();
-
-    private async Task DrainAsync(ISdrMonitor monitor, CancellationToken ct)
+    public async ValueTask DisposeAsync()
     {
-        try
-        {
-            await foreach (Signal signal in monitor.Signals(ct))
-            {
-                Interlocked.Increment(ref _received);
-                Table.Submit(signal); // черга потокобезпечна; розбір — на UI-таймері таблиці
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // штатна зупинка
-        }
+        _monitoring.StatusChanged -= OnStatusChanged;
+        await _monitoring.DisposeAsync();
     }
 
-    private void OnStatusChanged(object? sender, ConnectionStatus status) => _ui.Post(_ => StatusText = Describe(status), null);
+    private void OnStatusChanged(ConnectionStatus status) => _ui.Post(_ => StatusText = Describe(status), null);
 
     private static string Describe(ConnectionStatus status) => status switch
     {
-                ConnectionStatus.Disconnected => "Відключено",
-                ConnectionStatus.Connecting   => "Підключення...",
-                ConnectionStatus.Connected    => "Підключено",
-                ConnectionStatus.Reconnecting => "Відновлення...",
-                ConnectionStatus.Stopped      => "Зупинено",
-                _                             => status.ToString(),
+        ConnectionStatus.Disconnected => "Відключено",
+        ConnectionStatus.Connecting   => "Підключення...",
+        ConnectionStatus.Connected    => "Підключено",
+        ConnectionStatus.Reconnecting => "Відновлення...",
+        ConnectionStatus.Stopped      => "Зупинено",
+        _                             => status.ToString(),
     };
 }

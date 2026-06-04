@@ -7,40 +7,40 @@ using System.Windows.Data;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using NetSdrMonitor.Core.Abstractions.Persistence;
+using NetSdrMonitor.Core.Features.Monitoring;
 using NetSdrMonitor.Domain.Aggregation;
-using NetSdrMonitor.Domain.Signals;
 // ReSharper disable MemberCanBePrivate.Global
 
 namespace NetSdrMonitor.Desktop.Features.Monitor;
 
 /// <summary>
-/// Модель таблиці моніторингу: приймає потік сигналів, зводить їх у записи через доменний
-/// агрегатор і віддає рядки в грід. Сортування й фільтрація працюють поверх подання колекції,
-/// частота показується за медіаною або першим сигналом. Закриті записи осідають у сховищі.
+/// Модель таблиці моніторингу: показує агреговані записи. Живі зміни приходять подіями від
+/// <see cref="MonitoringService"/>, історію вантажить <see cref="RecordFeed"/>. Сама модель — лише
+/// презентація: батчить події в UI-потоці, тримає фільтри/сортування, ліміт видимих рядків і діапазон дат.
+/// Приймання, агрегація й персист живуть у Core-сервісі, не тут.
 /// </summary>
 /// <remarks>
-/// Потоковість: сигнали кладуться у чергу з фонової задачі (<see cref="Submit"/>), а розбираються
-/// батчами на UI-потоці за таймером — так грід не захлинається за високого темпу і не блокує вікно.
+/// Потоковість: події записів приходять з фонового потоку сервісу, кладуться в чергу й розбираються
+/// батчами на UI-потоці за таймером — так грід не захлинається за високого темпу й не блокує вікно.
 /// </remarks>
 public sealed partial class MonitorViewModel : ObservableObject
 {
-   // обмеження розбору за один тік — захист UI від сплеску за дуже високого темпу прийому
+   // обмеження розбору за один тік — захист UI від сплеску за дуже високого темпу
    private const int MaxDrainPerTick = 5_000;
 
    // допустимі формати вводу нижньої межі за часом доби
    private static readonly string[] TimeFormats = { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss" };
 
-   private readonly ConcurrentQueue<Signal> _inbox = new();
+   private readonly MonitoringService _monitoring;
+   private readonly RecordFeed _feed;
+   private readonly SynchronizationContext _ui;
+
+   private readonly ConcurrentQueue<RecordChange> _pending = new();
    private readonly DispatcherTimer _pump;
 
-   private ISignalRecordRepository? _repository;
-   private SignalAggregator? _aggregator;
-   private SignalRecordRow? _openRow; // рядок поточного відкритого запису (оновлюємо на кожній детекції)
-   private Task _persistChain = Task.CompletedTask; // ланцюг записів у сховище — щоб дочекатися їх перед очисткою
-
-   private bool _persistent; // true — сховище файлове (БД): діапазон дат читаємо запитом, ліміт у ньому вимкнено
-   private CancellationTokenSource? _loadCts; // скасування попереднього перезавантаження набору з БД
+   private SignalRecordRow? _openRow;         // рядок поточного відкритого запису
+   private CancellationTokenSource? _loadCts; // скасування попереднього перезавантаження набору
+   private TimeSpan? _minTimeOfDay;
 
    [ObservableProperty]
    private bool _useMedian = true; // за замовчуванням показуємо медіану за частотою
@@ -49,7 +49,7 @@ public sealed partial class MonitorViewModel : ObservableObject
    [ObservableProperty]
    private int _maxRecords = 500;
 
-   // триває перезавантаження набору з БД — UI показує індикатор зайнятості
+   // триває перезавантаження набору зі сховища — UI показує індикатор зайнятості
    [ObservableProperty]
    private bool _isLoading;
 
@@ -62,8 +62,6 @@ public sealed partial class MonitorViewModel : ObservableObject
    // нижня межа за часом доби у форматі «год:хв»; порожньо/некоректно — фільтр за часом вимкнено
    [ObservableProperty]
    private string _minTimeText = string.Empty;
-
-   private TimeSpan? _minTimeOfDay;
 
    [ObservableProperty]
    private double _minSnrDb;
@@ -78,23 +76,28 @@ public sealed partial class MonitorViewModel : ObservableObject
    [ObservableProperty]
    private DateTime? _toDate;
 
-   public MonitorViewModel()
+   public MonitorViewModel(MonitoringService monitoring, RecordFeed feed)
    {
+      _monitoring = monitoring;
+      _feed       = feed;
+      _ui         = SynchronizationContext.Current ?? new SynchronizationContext();
+
       Rows     = [];
       RowsView = CollectionViewSource.GetDefaultView(Rows);
       RowsView.Filter = FilterRow;
 
-      // за замовчуванням — найновіші зверху: дата й час сортуються як єдине ціле (спершу день,
-      // потім час доби), тож «найсвіжіше» — це найновіший момент, а не лише час доби.
-      // клік по заголовку Дати/Часу перемикає напрям одразу для пари (див. MainWindow.OnGridSorting)
+      // за замовчуванням — найновіші зверху: дата й час сортуються як єдине ціле (день, потім час доби)
       RowsView.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Date), ListSortDirection.Descending));
       RowsView.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Time), ListSortDirection.Descending));
 
-      // склад подання змінюється при додаванні рядків і при оновленні фільтра — оновлюємо лічильник
       ((INotifyCollectionChanged)RowsView).CollectionChanged += (_, _) => OnPropertyChanged(nameof(VisibleCount));
+
+      _monitoring.RecordChanged += OnRecordChanged; // фоновий потік сервісу -> черга
+      _monitoring.SourceChanged += OnSourceChanged; // повне перезавантаження набору (старт/очистка)
 
       _pump = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
       _pump.Tick += (_, _) => Drain();
+      _pump.Start();
    }
 
    /// <summary>
@@ -122,84 +125,49 @@ public sealed partial class MonitorViewModel : ObservableObject
    /// </summary>
    public int VisibleCount => RowsView is CollectionView view ? view.Count : Rows.Count;
 
-   /// <summary>
-   /// Готує модель до нової сесії: підхоплює сховище, завантажує стартовий набір і відкриває агрегатор.
-   /// </summary>
-   public async Task BeginAsync(ISignalRecordRepository repository, bool persistent, int maxRecords, CancellationToken cancellationToken = default)
-   {
-      _repository = repository;
-      _persistent = persistent;
-      _maxRecords = maxRecords > 0 ? maxRecords : 1; // поле напряму — без перезавантаження у сетері
-      OnPropertyChanged(nameof(MaxRecords));
-
-      _inbox.Clear(); // прибираємо можливий хвіст сигналів попередньої сесії
-      _openRow      = null;
-      _persistChain = Task.CompletedTask;
-
-      _aggregator = SignalAggregator.Create()
-         .OnRecordOpened(OnRecordOpened)
-         .OnSignalAppended(OnSignalAppended)
-         .OnRecordClosed(OnRecordClosed)
-         .Build();
-
-      // стартовий набір: для БД — свіжий «хвіст» (або діапазон, якщо фільтр дат уже стоїть); для пам'яті — порожньо
-      await ReloadAsync();
-
-      _pump.Start();
-   }
-
-   /// <summary>
-   /// Кладе прийнятий сигнал у чергу на розбір (викликається з фонової задачі прийому).
-   /// </summary>
-   public void Submit(Signal signal) => _inbox.Enqueue(signal);
-
-   /// <summary>
-   /// Завершує сесію: дорозбирає чергу, закриває останній відкритий запис і чекає, доки всі
-   /// закриті записи осядуть у сховищі (щоб подальша очистка не розійшлася із фоновим записом).
-   /// </summary>
-   public async Task EndAsync()
-   {
-      _pump.Stop();
-      Drain();
-      _aggregator?.Dispose(); // закриває останній запис -> OnRecordClosed -> ланцюг запису
-      _aggregator = null;
-      await _persistChain;
-   }
-
-   /// <summary>
-   /// Очищає таблицю й сховище — починаємо журнал з чистого аркуша.
-   /// </summary>
-   public async Task ClearAsync(CancellationToken cancellationToken = default)
-   {
-      if (_repository is not null)
-         await _repository.ClearAsync(cancellationToken);
-
-      Rows.Clear();
-      _openRow = null;
-   }
-
    private FrequencyMode CurrentMode => UseMedian ? FrequencyMode.Median : FrequencyMode.First;
+
+   // режим діапазону: лише у персистентному сховищі діапазон читається запитом і вимикає ліміт;
+   // у леткій пам'яті діапазон — клієнтський фільтр над обмеженим набором
+   private bool RangeMode => _monitoring.IsPersistentStore && RangeActive;
+
+   private bool RangeActive => FromDate is not null || ToDate is not null;
+
+   // --- живий потік записів: фон -> черга -> помпа (UI) ---
+
+   private void OnRecordChanged(RecordChange change) => _pending.Enqueue(change);
 
    private void Drain()
    {
-      if (_aggregator is null)
-         return;
-
       int processed = 0;
-      while (processed < MaxDrainPerTick && _inbox.TryDequeue(out Signal signal))
+      while (processed < MaxDrainPerTick && _pending.TryDequeue(out RecordChange change))
       {
-         _aggregator.Process(signal);
+         Apply(change);
          processed++;
       }
    }
 
-   private void OnRecordOpened(SignalRecord record)
+   private void Apply(RecordChange change)
    {
-      // у режимі БД з активним діапазоном дат показуємо лише ті записи, що в нього потрапляють,
-      // і НЕ обрізаємо за лімітом (діапазонний перегляд необмежений)
-      if (_persistent && RangeActive && !InActiveRange(record))
+      switch (change.Kind)
       {
-         _openRow = null; // запис поза діапазоном: у таблицю не додаємо й «живим» не відстежуємо
+         case RecordChangeKind.Opened:
+            OpenRow(change.Record);
+            break;
+
+         case RecordChangeKind.Updated:
+         case RecordChangeKind.Closed:
+            _openRow?.Refresh(); // оновились медіана/лічильник/стан відкритого рядка
+            break;
+      }
+   }
+
+   private void OpenRow(SignalRecord record)
+   {
+      // у режимі БД з активним діапазоном показуємо лише записи проміжку й НЕ обрізаємо за лімітом
+      if (RangeMode && !InActiveRange(record))
+      {
+         _openRow = null; // поза діапазоном: у таблицю не додаємо й «живим» не відстежуємо
          return;
       }
 
@@ -207,37 +175,87 @@ public sealed partial class MonitorViewModel : ObservableObject
       _openRow = row;
       Rows.Add(row);
 
-      if (!(_persistent && RangeActive))
+      if (!RangeMode)
          TrimToCap(); // звичайний «хвіст»: тримаємо межу, відкидаючи найстаріші
    }
 
-   private void OnSignalAppended(SignalRecord record, Signal signal) => _openRow?.Refresh();
+   // --- перезавантаження набору (історія) ---
 
-   private void OnRecordClosed(SignalRecord record, RecordCloseReason reason)
+   // сервіс просить перечитати весь набір (старт сесії / очистка) — маршалимо на UI-потік
+   private void OnSourceChanged() => _ui.Post(_ => _ = ReloadAsync(), null);
+
+   // діапазон дат: БД перечитує набір (усі записи проміжку, без ліміту); пам'ять — клієнтський фільтр
+   private void OnRangeChanged()
    {
-      _openRow?.Refresh();
-      // запис уже закритий і незмінний; зберігаємо по черзі, щоб мати один awaitable «усі записи завершені»
-      _persistChain = ChainPersistAsync(_persistChain, record);
+      if (_monitoring.IsPersistentStore)
+         _ = ReloadAsync();
+      else
+         RowsView.Refresh();
    }
 
-   private async Task ChainPersistAsync(Task previous, SignalRecord record)
+   // перечитує набір зі сховища під поточний фільтр; попереднє завантаження скасовуємо, щоб не наклались
+   private async Task ReloadAsync()
    {
-      await previous; // БД і так серіалізує запис — черга лише дає нам точку очікування
-      await PersistAsync(record);
-   }
+      _loadCts?.Cancel();
+      var cts = new CancellationTokenSource();
+      _loadCts = cts;
+      CancellationToken token = cts.Token;
 
-   private async Task PersistAsync(SignalRecord record)
-   {
+      IsLoading = true;
       try
       {
-         if (_repository is not null)
-            await _repository.AddAsync(record);
+         var query = RecordQuery.ForDays(MaxRecords, FromDate, ToDate);
+         IReadOnlyList<SignalRecord> data = await _feed.LoadAsync(query, token);
+
+         if (!token.IsCancellationRequested)
+            ReplaceRows(data);
       }
-      catch
+      catch (OperationCanceledException)
       {
-         // збій сховища не має валити прийом сигналів; журнал помилок з'явиться разом із Serilog
+         // перекрито новішим завантаженням — ігноруємо
+      }
+      finally
+      {
+         if (ReferenceEquals(_loadCts, cts))
+            IsLoading = false;
       }
    }
+
+   // замінює весь вміст таблиці завантаженим набором (історія — без анімації появи)
+   private void ReplaceRows(IReadOnlyList<SignalRecord> records)
+   {
+      Rows.Clear();
+      _openRow = null; // після переліку «живий» рядок не відстежуємо, доки не відкриється новий
+      FrequencyMode mode = CurrentMode;
+      foreach (SignalRecord record in records)
+         Rows.Add(new SignalRecordRow(record, mode));
+   }
+
+   // тримає таблицю в межах MaxRecords, відкидаючи найстаріші.
+   // Rows зберігається у хронологічному порядку додавання, тож найстаріший — перший
+   private void TrimToCap()
+   {
+      while (Rows.Count > MaxRecords && Rows.Count > 0)
+      {
+         if (ReferenceEquals(Rows[0], _openRow))
+            break; // відкритий «живий» рядок завжди найновіший — сюди не дійде, лишаємо як запобіжник
+
+         Rows.RemoveAt(0);
+      }
+   }
+
+   // чи потрапляє запис у поточний діапазон дат (за днем першої детекції, включно з обома кінцями)
+   private bool InActiveRange(SignalRecord record)
+   {
+      DateTime day = record.First.Timestamp.LocalDateTime.Date;
+      if (FromDate is { } from && day < from.Date)
+         return false;
+      if (ToDate is { } to && day > to.Date)
+         return false;
+      return true;
+   }
+
+   // --- фільтр подання (клієнтський, поверх завантаженого набору) ---
 
    private bool FilterRow(object item)
    {
@@ -271,6 +289,8 @@ public sealed partial class MonitorViewModel : ObservableObject
 
       return true;
    }
+
+   // --- реакції на зміни властивостей ---
 
    partial void OnUseMedianChanged(bool value)
    {
@@ -308,7 +328,7 @@ public sealed partial class MonitorViewModel : ObservableObject
    // у діапазонному режимі БД ліміт не діє, тож нічого не робимо
    partial void OnMaxRecordsChanged(int value)
    {
-      if (_persistent)
+      if (_monitoring.IsPersistentStore)
       {
          if (!RangeActive)
             _ = ReloadAsync();
@@ -316,93 +336,6 @@ public sealed partial class MonitorViewModel : ObservableObject
       else
       {
          TrimToCap();
-      }
-   }
-
-   // діапазон дат: БД перечитує набір (усі записи проміжку, без ліміту); пам'ять фільтрує набір клієнтськи
-   private void OnRangeChanged()
-   {
-      if (_persistent)
-         _ = ReloadAsync();
-      else
-         RowsView.Refresh();
-   }
-
-   private bool RangeActive => FromDate is not null || ToDate is not null;
-
-   private DateTimeOffset RangeFrom => FromDate is { } from
-      ? new DateTimeOffset(DateTime.SpecifyKind(from.Date, DateTimeKind.Local))
-      : DateTimeOffset.MinValue;
-
-   // верхня межа — наступна північ після останнього дня (проміжок напіввідкритий: [from; to))
-   private DateTimeOffset RangeTo => ToDate is { } to
-      ? new DateTimeOffset(DateTime.SpecifyKind(to.Date.AddDays(1), DateTimeKind.Local))
-      : DateTimeOffset.MaxValue;
-
-   // чи потрапляє запис у поточний діапазон дат (за днем першої детекції, включно з обома кінцями)
-   private bool InActiveRange(SignalRecord record)
-   {
-      DateTime day = record.First.Timestamp.LocalDateTime.Date;
-      if (FromDate is { } from && day < from.Date)
-         return false;
-      if (ToDate is { } to && day > to.Date)
-         return false;
-      return true;
-   }
-
-   // перечитує набір зі сховища: діапазон дат (БД) або свіжий «хвіст» на MaxRecords.
-   // попереднє завантаження скасовуємо, щоб швидкі зміни фільтра не наклались
-   private async Task ReloadAsync()
-   {
-      if (_repository is null)
-         return;
-
-      _loadCts?.Cancel();
-      var cts = new CancellationTokenSource();
-      _loadCts = cts;
-      CancellationToken token = cts.Token;
-
-      IsLoading = true;
-      try
-      {
-         IReadOnlyList<SignalRecord> data = _persistent && RangeActive
-            ? await _repository.GetInRangeAsync(RangeFrom, RangeTo, token)
-            : await _repository.GetRecentAsync(MaxRecords, token);
-
-         if (!token.IsCancellationRequested)
-            ReplaceRows(data);
-      }
-      catch (OperationCanceledException)
-      {
-         // перекрито новішим завантаженням — ігноруємо
-      }
-      finally
-      {
-         if (ReferenceEquals(_loadCts, cts))
-            IsLoading = false;
-      }
-   }
-
-   // замінює весь вміст таблиці завантаженим набором (історія — без анімації появи)
-   private void ReplaceRows(IReadOnlyList<SignalRecord> records)
-   {
-      Rows.Clear();
-      _openRow = null; // після переліку «живий» рядок не відстежуємо, доки не відкриється новий
-      FrequencyMode mode = CurrentMode;
-      foreach (SignalRecord record in records)
-         Rows.Add(new SignalRecordRow(record, mode));
-   }
-
-   // тримає таблицю в межах MaxRecords, відкидаючи найстаріші.
-   // Rows зберігається у хронологічному порядку додавання, тож найстаріший — перший
-   private void TrimToCap()
-   {
-      while (Rows.Count > MaxRecords && Rows.Count > 0)
-      {
-         if (ReferenceEquals(Rows[0], _openRow))
-            break; // відкритий «живий» рядок завжди найновіший — сюди не дійде, лишаємо як запобіжник
-
-         Rows.RemoveAt(0);
       }
    }
 

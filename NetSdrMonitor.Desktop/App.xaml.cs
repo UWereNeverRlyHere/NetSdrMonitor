@@ -3,7 +3,9 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NetSdrMonitor.Core.Abstractions.Persistence;
+using NetSdrMonitor.Core.Features.Monitoring;
 using NetSdrMonitor.Desktop.Features.Console;
+using NetSdrMonitor.Desktop.Features.Monitor;
 using NetSdrMonitor.Desktop.Features.Settings;
 using NetSdrMonitor.Desktop.Logging;
 using NetSdrMonitor.Desktop.Settings;
@@ -39,7 +41,18 @@ public partial class App : Application
 
          var store = new JsonSettingsStore();
          AppSettings settings = store.Load();
-         _simulation = new SimulationController(settings, repositoryFactory, _loggerFactory, logSink);
+
+         // прикладні сервіси (Core) + їх композиція: фабрики читають актуальні настройки на кожен старт
+         var session        = new RecordSession();
+         var monitorFactory = new SdrMonitorFactory(store, _loggerFactory);
+         var storeFactory   = new SessionStoreFactory(store, repositoryFactory);
+         var monitoring     = new MonitoringService(monitorFactory, storeFactory, session);
+         var feed           = new RecordFeed(session);
+
+         // тонкі під-моделі + shell, що їх агрегує
+         var table   = new MonitorViewModel(monitoring, feed);
+         var console = new ConsoleViewModel(logSink);
+         _simulation = new SimulationController(monitoring, table, console, settings);
 
          var main = new MainWindow(_simulation, store);
          MainWindow = main;
