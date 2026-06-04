@@ -41,6 +41,9 @@ public sealed record AppSettings
     public bool ShowConsole { get; init; } = true;
     public double ConsoleHeight { get; init; }
 
+    // висота смуги спектра діапазону (px); 0 — користувач ще не міняв, береться стартова з XAML
+    public double SpectrumHeight { get; init; }
+
     // збережений розмір і позиція вікон; null — ще не зберігали, береться стартовий дефолт
     public WindowPlacement? MainWindowPlacement { get; init; }
     public WindowPlacement? SettingsWindowPlacement { get; init; }

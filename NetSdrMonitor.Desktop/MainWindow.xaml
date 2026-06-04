@@ -38,9 +38,9 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" MinHeight="140" />
+                <RowDefinition Height="*" MinHeight="140"  />
                 <RowDefinition Height="Auto" />
-                <RowDefinition x:Name="ConsoleRow" Height="0" />
+                <RowDefinition x:Name="ConsoleRow" Height="0" MaxHeight="350"/>
             </Grid.RowDefinitions>
 
             <features:AppTray x:Name="Tray" Grid.Row="0" />
@@ -88,11 +88,12 @@
                     <ColumnDefinition Width="230" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <!-- права колонка ділиться по вертикалі: таблиця зверху, спектр діапазону знизу -->
+                <!-- права колонка ділиться по вертикалі: таблиця зверху, спектр діапазону знизу.
+                     стартова висота смуги спектра — у SpectrumRow (її ж запам'ятовуємо між запусками) -->
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" MinHeight="120" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="150" MinHeight="90" />
+                    <RowDefinition x:Name="SpectrumRow" Height="120" MinHeight="90" MaxHeight="200"/>
                 </Grid.RowDefinitions>
 
                 <!-- ліва панель: лічильник записів + фільтри (фіксована ширина, зі скролом на низькому вікні) -->
@@ -232,6 +233,7 @@
             <GridSplitter Grid.Column="1" Grid.Row="1" Height="4"
                           HorizontalAlignment="Stretch" VerticalAlignment="Center"
                           ResizeBehavior="PreviousAndNext" ResizeDirection="Rows"
+                          DragCompleted="OnSpectrumSplitterDragCompleted"
                           
                           Background="{DynamicResource DividerStrokeColorDefaultBrush}" Cursor="SizeNS" />
 
@@ -255,7 +257,8 @@
             <!-- роздільник між таблицею та консоллю: тягнемо мишею, висота запам'ятовується -->
             <GridSplitter x:Name="ConsoleSplitter" Grid.Row="2" Height="4" Visibility="Collapsed"
                           HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                          ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                          ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" 
+                          Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
 
             <!-- нижня консоль логів монітора (видимість — за налаштуванням) -->
             <console:ConsoleView x:Name="ConsoleHost" Grid.Row="3" Visibility="Collapsed"

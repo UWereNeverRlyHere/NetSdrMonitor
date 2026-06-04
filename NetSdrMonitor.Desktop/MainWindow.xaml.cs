@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using NetSdrMonitor.Desktop.Behaviors;
@@ -19,7 +20,7 @@ namespace NetSdrMonitor.Desktop;
 /// </summary>
 public partial class MainWindow : FluentWindow
 {
-    private const double DefaultConsoleHeight = 180; // ≈28% від типової висоти вікна
+    private const double DefaultConsoleHeight = 140; 
 
     private readonly SimulationController _simulation;
     private readonly JsonSettingsStore _store;
@@ -37,7 +38,11 @@ public partial class MainWindow : FluentWindow
         AppSettings settings = _store.Load();
         if (settings.ConsoleHeight > 0)
             _consoleHeightPx = settings.ConsoleHeight;
-        
+
+        // відновлюємо збережену висоту смуги спектра; 0 — лишаємо стартову з XAML
+        if (settings.SpectrumHeight > 0)
+            SpectrumRow.Height = new GridLength(settings.SpectrumHeight);
+
         _ = new WindowPlacementBinder(this,
             () => _store.Load().MainWindowPlacement,
             placement => _store.Save(_store.Load() with { MainWindowPlacement = placement }));
@@ -96,6 +101,13 @@ public partial class MainWindow : FluentWindow
             ConsoleSplitter.Visibility = Visibility.Collapsed;
             ConsoleHost.Visibility     = Visibility.Collapsed;
         }
+    }
+
+    // висоту смуги спектра зберігаємо одразу по завершенні перетягування — переживе навіть вихід через трей
+    private void OnSpectrumSplitterDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (SpectrumRow.Height.IsAbsolute)
+            _store.Save(_store.Load() with { SpectrumHeight = SpectrumRow.Height.Value });
     }
 
     private void OnResetFilter(object sender, RoutedEventArgs e)
