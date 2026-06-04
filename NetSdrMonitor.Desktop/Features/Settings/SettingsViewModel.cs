@@ -66,4 +66,18 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
          ShowConsole             = ShowConsole,
          Theme                   = Theme,
    };
+   
+   // нижню межу не пускаємо вище верхньої — зажимаємо саме редаговане поле, верхнє не чіпаємо
+   partial void OnMinCenterMhzChanged(double value)
+   {
+      if (value >= MaxCenterMhz)
+         MinCenterMhz = MaxCenterMhz-1;
+   }
+
+   // верхню межу не пускаємо нижче нижньої — так само зажимаємо лише її
+   partial void OnMaxCenterMhzChanged(double value)
+   {
+      if (value <= MinCenterMhz)
+         MaxCenterMhz = MinCenterMhz+1;
+   }
 }

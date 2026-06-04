@@ -101,4 +101,7 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
       Saved        = updated;
       DialogResult = true;
    }
+   
+   
 }
+
