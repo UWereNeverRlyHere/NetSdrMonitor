@@ -137,25 +137,31 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="date" Header="Дата" Width="100"
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="date" Header="Дата" 
+                                        MinWidth="100" Width="110" MaxWidth="200"
                                         Binding="{Binding Time, StringFormat='{}{0:dd.MM.yyyy}'}"
                                         ElementStyle="{StaticResource CellCenter}" />
                     <!-- SortDirection лише показує стрілку в заголовку; саме сортування тримає RowsView -->
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="time" Header="Час" Width="120"
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="time" Header="Час" 
+                                        MinWidth="100" Width="110" MaxWidth="200"
                                         SortDirection="Descending"
                                         Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}"
                                         ElementStyle="{StaticResource CellCenter}" />
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="freq" Width="130"
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="freq"
+                                        MinWidth="100" Width="130" MaxWidth="200"
                                         Header="{Binding Data.Table.FrequencyColumnTitle, Source={StaticResource Proxy}}"
                                         Binding="{Binding FrequencyMhz, StringFormat='{}{0:F3}'}"
                                         ElementStyle="{StaticResource CellCenter}" />
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="bw" Header="Смуга, кГц" Width="110"
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="bw" Header="Смуга, кГц"
+                                        MinWidth="90" Width="110" MaxWidth="170"
                                         Binding="{Binding BandwidthKhz, StringFormat='{}{0:F1}'}"
                                         ElementStyle="{StaticResource CellCenter}" />
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="snr" Header="SNR, дБ" Width="90"
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="snr" Header="SNR, дБ"
+                                        MinWidth="60" Width="80" MaxWidth="150"
                                         Binding="{Binding SnrDb, StringFormat='{}{0:F1}'}"
                                         ElementStyle="{StaticResource CellCenter}" />
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="count" Header="Сигналів" Width="90"
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="count" Header="Сигналів"
+                                        MinWidth="60" Width="90" MaxWidth="150"
                                         Binding="{Binding Count}"
                                         ElementStyle="{StaticResource CellCenter}" />
                 </DataGrid.Columns>

@@ -39,16 +39,20 @@
                   GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                   BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" FontSize="14">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Час" Width="130"
+                <DataGridTextColumn Header="Час" 
+                                    MinWidth="100" Width="130" MaxWidth="200"
                                     Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}"
                                     ElementStyle="{StaticResource CellCenter}" />
-                <DataGridTextColumn Header="Частота, МГц" Width="130"
+                <DataGridTextColumn Header="Частота, МГц" 
+                                    MinWidth="100" Width="130" MaxWidth="200"
                                     Binding="{Binding FrequencyMhz, StringFormat='{}{0:F3}'}"
                                     ElementStyle="{StaticResource CellCenter}" />
-                <DataGridTextColumn Header="Смуга, кГц" Width="110"
+                <DataGridTextColumn Header="Смуга, кГц" 
+                                    MinWidth="100" Width="110" MaxWidth="200"
                                     Binding="{Binding BandwidthKhz, StringFormat='{}{0:F1}'}"
                                     ElementStyle="{StaticResource CellCenter}" />
-                <DataGridTextColumn Header="SNR, дБ" Width="*"
+                <DataGridTextColumn Header="SNR, дБ"
+                                    MinWidth="100" Width="*" MaxWidth="200"
                                     Binding="{Binding SnrDb, StringFormat='{}{0:F1}'}"
                                     ElementStyle="{StaticResource CellCenter}" />
             </DataGrid.Columns>
