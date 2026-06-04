@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using NetSdrMonitor.Core.Abstractions.Communication;
 using NetSdrMonitor.Domain.Signals;
 using NetSdrMonitor.Protocol;
+using NetSdrMonitor.Protocol.ControlItems;
 using NetSdrMonitor.Protocol.Messages;
 
 namespace NetSdrMonitor.Communication.Monitor;

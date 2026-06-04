@@ -1,4 +1,4 @@
-namespace NetSdrMonitor.Protocol;
+namespace NetSdrMonitor.Protocol.ControlItems;
 
 /// <summary>
 /// Бажаний стан приймача для команди Run/Stop. Публічне, «чисте» подання —
@@ -6,9 +6,13 @@ namespace NetSdrMonitor.Protocol;
 /// </summary>
 public enum ReceiverState
 {
-    /// <summary>Запустити захоплення й відправлення даних.</summary>
+    /// <summary>
+    /// Запустити захоплення й відправлення даних.
+    /// </summary>
     Running,
 
-    /// <summary>Зупинити захоплення даних.</summary>
+    /// <summary>
+    /// Зупинити захоплення даних.
+    /// </summary>
     Stopped,
 }

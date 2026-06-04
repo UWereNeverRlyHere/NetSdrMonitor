@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace NetSdrMonitor.Desktop.Behaviors;
+namespace NetSdrMonitor.Desktop.Features.Windowing;
 
 /// <summary>
 /// Приєднані властивості розміру вікна: стартова частка робочої області монітора,

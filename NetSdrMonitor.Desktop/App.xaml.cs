@@ -4,10 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NetSdrMonitor.Core.Abstractions.Persistence;
 using NetSdrMonitor.Desktop.Features.Console;
+using NetSdrMonitor.Desktop.Features.Settings;
 using NetSdrMonitor.Desktop.Logging;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Desktop.Shell;
-using NetSdrMonitor.Desktop.Theming;
 using NetSdrMonitor.Infrastructure.Persistence.Sqlite;
 
 namespace NetSdrMonitor.Desktop;

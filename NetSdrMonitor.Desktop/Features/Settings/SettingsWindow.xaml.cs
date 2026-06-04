@@ -1,8 +1,7 @@
 using System.Windows;
 using System.Windows.Interop;
-using NetSdrMonitor.Desktop.Behaviors;
+using NetSdrMonitor.Desktop.Features.Windowing;
 using NetSdrMonitor.Desktop.Settings;
-using NetSdrMonitor.Desktop.Theming;
 
 namespace NetSdrMonitor.Desktop.Features.Settings;
 

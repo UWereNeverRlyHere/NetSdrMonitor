@@ -3,9 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using NetSdrMonitor.Desktop.Behaviors;
 using NetSdrMonitor.Desktop.Features.Monitor;
+using NetSdrMonitor.Desktop.Features.Windowing;
 using NetSdrMonitor.Desktop.Features.Settings;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Desktop.Shell;
@@ -37,9 +37,7 @@ public partial class MainWindow : FluentWindow
         AppSettings settings = _store.Load();
         if (settings.ConsoleHeight > 0)
             _consoleHeightPx = settings.ConsoleHeight;
-
-        // розмір/позицію вікна веде окремий байндер: відновлює при показі й зберігає наживо при змінах.
-        // він живе разом із вікном через підписки на його події, тож окреме поле не потрібне
+        
         _ = new WindowPlacementBinder(this,
             () => _store.Load().MainWindowPlacement,
             placement => _store.Save(_store.Load() with { MainWindowPlacement = placement }));
@@ -47,8 +45,7 @@ public partial class MainWindow : FluentWindow
         _simulation.PropertyChanged += OnSimulationPropertyChanged;
         ApplyConsole(_simulation.ShowConsole);
     }
-
-   
+    
     private void OnToggle(object sender, RoutedEventArgs e) => _ = _simulation.ToggleAsync();
 
     private void OnSettings(object sender, RoutedEventArgs e) => SettingsWindow.OpenOrActivate(this, _store.Load(), _store, saved => _ = _simulation.UpdateSettingsAsync(saved));
@@ -71,7 +68,7 @@ public partial class MainWindow : FluentWindow
         if (SignalsGrid.SelectedItem is SignalRecordRow row)
             new SignalDetailsWindow(row, _store)
             {
-                        Owner = this
+               Owner = this
             }.Show();
     }
 
@@ -115,8 +112,7 @@ public partial class MainWindow : FluentWindow
     // ключі пов'язаної пари колонок, що сортуються як одне ціле (день, потім час доби)
     private static readonly string[] DateTimeKeys = { "date", "time" };
 
-    // Дата й Час — одна логічна вісь (момент детекції), тож сортуємо їх разом: інакше клік по «Час»
-    // упорядкував би лише за часом доби й до найсвіжіших могли б домішатись учорашні записи
+    // Дата й Час — одна логічна вісь (момент детекції), тож сортуємо їх разом
     private void OnGridSorting(object sender, DataGridSortingEventArgs e)
     {
         if (ColumnLayout.GetKey(e.Column) is not { } key || !DateTimeKeys.Contains(key))

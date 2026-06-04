@@ -13,6 +13,6 @@ public sealed class UiLoggerProvider(UiLogSink sink, LogLevel minLevel) : ILogge
 
     public void Dispose()
     {
-        // окремих ресурсів на провайдер немає
+        // окремих ресурсів немає
     }
 }

@@ -2,7 +2,7 @@ using System.Windows;
 using NetSdrMonitor.Desktop.Settings;
 using Wpf.Ui.Appearance;
 
-namespace NetSdrMonitor.Desktop.Theming;
+namespace NetSdrMonitor.Desktop.Features.Settings;
 
 /// <summary>
 /// Застосовує обрану тему оформлення до всього застосунку й, у системному режимі,

@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using NetSdrMonitor.Domain.Signals;
 using NetSdrMonitor.Protocol;
+using NetSdrMonitor.Protocol.ControlItems;
 using NetSdrMonitor.Protocol.Messages;
 
 namespace NetSdrMonitor.IntegrationTests.Communication;

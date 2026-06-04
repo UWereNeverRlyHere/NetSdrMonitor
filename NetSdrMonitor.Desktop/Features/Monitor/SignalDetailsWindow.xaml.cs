@@ -1,5 +1,5 @@
 using System.Globalization;
-using NetSdrMonitor.Desktop.Behaviors;
+using NetSdrMonitor.Desktop.Features.Windowing;
 using NetSdrMonitor.Desktop.Settings;
 using Wpf.Ui.Controls;
 

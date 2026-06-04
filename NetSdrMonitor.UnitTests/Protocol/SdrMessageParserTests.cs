@@ -1,6 +1,7 @@
 using NetSdrMonitor.Communication.Server;
 using NetSdrMonitor.Domain.Signals;
 using NetSdrMonitor.Protocol;
+using NetSdrMonitor.Protocol.ControlItems;
 using NetSdrMonitor.Protocol.Messages;
 
 namespace NetSdrMonitor.UnitTests.Protocol;
