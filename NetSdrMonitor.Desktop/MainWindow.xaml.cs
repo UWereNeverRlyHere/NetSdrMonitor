@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using NetSdrMonitor.Desktop.Behaviors;
 using NetSdrMonitor.Desktop.Features.Monitor;
 using NetSdrMonitor.Desktop.Features.Settings;
@@ -107,30 +106,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _simulation.Table.MinSignalCount = 0;
         _simulation.Table.FromDate       = null;
         _simulation.Table.ToDate         = null;
-    }
-
-    // рядок матеріалізується (зокрема при віртуалізації/переробці) — аналог updateItem у Java-row-factory.
-    // анімуємо лише позначені новими; прапорець гасимо, щоб ефект був разовим і не спрацьовував при скролі
-    private void OnSignalsRowLoading(object? sender, DataGridRowEventArgs e)
-    {
-        if (e.Row.Item is SignalRecordRow { NeedFadeIn: true } row)
-        {
-            row.NeedFadeIn = false;
-            PlayRowFadeIn(e.Row);
-        }
-    }
-
-    // плавна поява: прозорість 0→1 + легкий зсув зверху
-    private static void PlayRowFadeIn(DataGridRow row)
-    {
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var duration = new Duration(TimeSpan.FromMilliseconds(500));
-
-        var slide = new TranslateTransform();
-        row.RenderTransform = slide;
-
-        row.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
-        slide.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-120, 0, duration) { EasingFunction = ease });
     }
 
     private void OnGridLoaded(object sender, RoutedEventArgs e)

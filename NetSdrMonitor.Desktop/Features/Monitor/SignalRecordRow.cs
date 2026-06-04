@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using NetSdrMonitor.Desktop.Behaviors;
 using NetSdrMonitor.Domain.Aggregation;
 using NetSdrMonitor.Domain.Signals;
 
@@ -9,7 +10,7 @@ namespace NetSdrMonitor.Desktop.Features.Monitor;
 /// у МГц/кГц і віддає частоту згідно з обраним режимом (медіана чи перший сигнал). Домен
 /// лишається чистим — тут лише форматування й сповіщення UI про зміни живого рядка.
 /// </summary>
-public sealed partial class SignalRecordRow : ObservableObject
+public sealed partial class SignalRecordRow : ObservableObject, IAnimatedRow
 {
    private readonly SignalRecord _record;
    private FrequencyMode _mode;
