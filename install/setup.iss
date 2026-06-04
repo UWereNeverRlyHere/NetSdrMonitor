@@ -7,7 +7,7 @@
 ;   windowsdesktop-runtime-10.0.8-win-x64.exe
 
 #define MyAppName        "NetSdrMonitor"
-#define MyAppVersion     "1.0.0"
+#define MyAppVersion     "1.0.1"
 #define MyAppPublisher   "u_were_never_rly_here"
 #define MyAppExeName     "NetSdrMonitor.Desktop.exe"
 
