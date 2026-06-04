@@ -1,11 +1,12 @@
 using System.Windows;
 using System.Windows.Interop;
+using NetSdrMonitor.Desktop.Behaviors;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Desktop.Theming;
 
 namespace NetSdrMonitor.Desktop.Features.Settings;
 
-public partial class SettingsWindow : Window
+public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
 {
    private static SettingsWindow? _open; // одне вікно налаштувань на застосунок
 
@@ -18,6 +19,11 @@ public partial class SettingsWindow : Window
       _store      = store;
       _viewModel  = new SettingsViewModel(current);
       DataContext = _viewModel;
+
+      // запам'ятовуємо розмір/позицію вікна налаштувань між відкриттями
+      _ = new WindowPlacementBinder(this,
+         () => _store.Load().SettingsWindowPlacement,
+         placement => _store.Save(_store.Load() with { SettingsWindowPlacement = placement }));
    }
 
    public AppSettings? Saved { get; private set; }
@@ -59,7 +65,18 @@ public partial class SettingsWindow : Window
 
    private void OnSave(object sender, RoutedEventArgs e)
    {
-      AppSettings updated = _viewModel.ToSettings();
+      // знімок налаштувань на момент відкриття вже застарів: розкладку вікон/колонок ведуть
+      // інші вікна «наживо», тож накладаємо редаговані поля на свіжий стан, а не на старий знімок
+      AppSettings latest = _store.Load();
+      AppSettings updated = _viewModel.ToSettings() with
+      {
+         MainWindowPlacement          = latest.MainWindowPlacement,
+         SettingsWindowPlacement      = latest.SettingsWindowPlacement,
+         SignalDetailsWindowPlacement = latest.SignalDetailsWindowPlacement,
+         ConsoleHeight                = latest.ConsoleHeight,
+         Columns                      = latest.Columns,
+      };
+
       _store.Save(updated);
       ThemeApplier.Apply(updated.Theme); // застосовуємо тему одразу, без перезапуску
       Saved        = updated;

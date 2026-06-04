@@ -8,9 +8,36 @@
         <!-- базова тема Fluent (Light як стартова); фактичний режим виставляє ThemeApplier на старті -->
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ui:ThemesDictionary Theme="Light"/>
-                <ui:ControlsDictionary/>
+                <ui:ThemesDictionary Theme="Light" />
+                <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
+            <!-- стиль кнопок: успадковує рідний вигляд WPF-UI, додає лише курсор-палець і темний фон при наведенні (решту шаблону не чіпаємо) -->
+            <Style x:Key="AppButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Cursor" Value="Hand" />
+                <Style.Resources>
+                    <!-- рідний шаблон бере фон наведення саме з цього ключа — підміняємо лише його -->
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#B8B0B0" />
+                </Style.Resources>
+                <Style.Triggers>
+                    <!-- на темному фоні робимо текст/іконку білими для контрасту -->
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Foreground" Value="White" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <!-- той самий ефект наведення для стрілок-RepeatButton -->
+            <Style x:Key="AppRepeatButton" TargetType="RepeatButton" BasedOn="{StaticResource {x:Type RepeatButton}}">
+                <Setter Property="Cursor" Value="Hand" />
+                <Style.Resources>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#4A4A4A" />
+                </Style.Resources>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Foreground" Value="White" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

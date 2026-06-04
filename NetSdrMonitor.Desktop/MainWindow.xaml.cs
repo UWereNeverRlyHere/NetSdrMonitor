@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,10 +32,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         _simulation = simulation;
         _store      = store;
         DataContext = simulation;
-        
+
         AppSettings settings = _store.Load();
         if (settings.ConsoleHeight > 0)
             _consoleHeightPx = settings.ConsoleHeight;
+
+        // розмір/позицію вікна веде окремий байндер: відновлює при показі й зберігає наживо при змінах.
+        // він живе разом із вікном через підписки на його події, тож окреме поле не потрібне
+        _ = new WindowPlacementBinder(this,
+            () => _store.Load().MainWindowPlacement,
+            placement => _store.Save(_store.Load() with { MainWindowPlacement = placement }));
 
         _simulation.PropertyChanged += OnSimulationPropertyChanged;
         ApplyConsole(_simulation.ShowConsole);
@@ -60,7 +67,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private void OnShowSignals(object sender, RoutedEventArgs e)
     {
         if (SignalsGrid.SelectedItem is SignalRecordRow row)
-            new SignalDetailsWindow(row)
+            new SignalDetailsWindow(row, _store)
             {
                         Owner = this
             }.Show();
@@ -129,6 +136,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
                     ConsoleHeight = _consoleHeightPx
         };
+
         if (_layoutApplied)
             settings = settings with
             {

@@ -10,6 +10,8 @@
 
         <TextBox x:Name="Input" Grid.Column="0" VerticalContentAlignment="Center"
                  PreviewTextInput="OnPreviewTextInput" DataObject.Pasting="OnPaste"
+                 PreviewKeyDown="OnInputKeyDown"
+
                  Text="{Binding Value, ElementName=Root, StringFormat={}{0:0.####}, UpdateSourceTrigger=PropertyChanged}"/>
 
         <!-- стрілки одна над одною: кожна займає половину висоти контролу -->
@@ -20,9 +22,11 @@
             </Grid.RowDefinitions>
 
             <RepeatButton Grid.Row="0" Content="▲" Click="OnUp"
+                          Style="{StaticResource AppRepeatButton}"
                           FontSize="9" Padding="0" MinWidth="0" MinHeight="0"
                           Background="Transparent" BorderThickness="0"/>
             <RepeatButton Grid.Row="1" Content="▼" Click="OnDown"
+                          Style="{StaticResource AppRepeatButton}"
                           FontSize="9" Padding="0" MinWidth="0" MinHeight="0"
                           Background="Transparent" BorderThickness="0"/>
         </Grid>

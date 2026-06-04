@@ -65,7 +65,11 @@ public partial class NumericSpinner : UserControl
 
       e.CancelCommand(); // нечислова вставка — відхиляємо
    }
-
+   private void OnInputKeyDown(object sender, KeyEventArgs e)
+   {
+      if (e.Key      == Key.Up)        { Value += Step; e.Handled = true; }
+      else if (e.Key == Key.Down) { Value      -= Step; e.Handled = true; }
+   }
    // підставляє введений фрагмент у поточний текст і перевіряє, чи лишається це коректним (частковим) числом
    private bool WouldStayValid(string insertion)
    {

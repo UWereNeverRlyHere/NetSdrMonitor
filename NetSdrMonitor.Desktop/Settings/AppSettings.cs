@@ -34,6 +34,11 @@ public sealed record AppSettings
     public bool ShowConsole { get; init; } = true;
     public double ConsoleHeight { get; init; }
 
+    // збережений розмір і позиція вікон; null — ще не зберігали, береться стартовий дефолт
+    public WindowPlacement? MainWindowPlacement { get; init; }
+    public WindowPlacement? SettingsWindowPlacement { get; init; }
+    public WindowPlacement? SignalDetailsWindowPlacement { get; init; }
+
     public IReadOnlyList<ColumnSetting> Columns { get; init; } = [];
 }
 

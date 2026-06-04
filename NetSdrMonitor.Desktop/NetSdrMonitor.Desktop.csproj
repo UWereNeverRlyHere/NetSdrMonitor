@@ -6,6 +6,8 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
+        <!-- маніфест вмикає Per-Monitor V2 DPI: коректний масштаб при переході між моніторами -->
+        <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
 
     <ItemGroup>

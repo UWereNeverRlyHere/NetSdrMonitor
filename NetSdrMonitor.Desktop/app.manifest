@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="NetSdrMonitor.Desktop.app" />
+
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <!-- Per-Monitor V2: WPF перераховує DPI при переході вікна між моніторами з різним масштабом;
+           значення з комою — резервні режими для старіших версій Windows -->
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
+      <!-- сумісність зі старими ОС, що не знають про dpiAwareness вище -->
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/PM</dpiAware>
+    </windowsSettings>
+  </application>
+</assembly>
