@@ -123,34 +123,34 @@
                         <!-- прокручувані фільтри (заповнюють решту висоти панелі) -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="10,0,10,10">
-                            <TextBlock Text="{Binding Table.FrequencyFilterTitle}" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding Table.FrequencyFilterTitle}" Margin="3,0,0,2" />
                             <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
                                                  Minimum="0" Step="1"
                                                  Value="{Binding Table.MinFrequencyMhz}" />
 
-                            <TextBlock Text="Смуга ≥, кГц" Margin="0,0,0,2" />
+                            <TextBlock Text="Смуга ≥, кГц" Margin="3,0,0,2" />
                             <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
                                                  Minimum="0" Step="5"
                                                  Value="{Binding Table.MinBandwidthKhz}" />
 
                            
-                            <TextBlock Text="SNR ≥" Margin="0,0,0,2" />
+                            <TextBlock Text="SNR ≥" Margin="3,0,0,2" />
                             <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
                                                  IntegerOnly="True" Minimum="0" Maximum="40" Step="1"
                                                  Value="{Binding Table.MinSnrDb}" />
 
-                            <TextBlock Text="Сигналів ≥" Margin="0,0,0,2" />
+                            <TextBlock Text="Сигналів ≥" Margin="3,0,0,2" />
                             <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
                                                  IntegerOnly="True" Minimum="0" Step="1"
                                                  Value="{Binding Table.MinSignalCount}" />
-                            <TextBlock Text="Час ≥ (год:хв)" Margin="0,0,0,2" />
+                            <TextBlock Text="Час ≥ (год:хв)" Margin="3,0,0,2" />
                             <ctrl:TimePicker Margin="0,0,0,10"
                                              Text="{Binding Table.MinTimeText, Mode=TwoWay}" />
 
-                            <TextBlock Text="Дата з" Margin="0,0,0,2" />
+                            <TextBlock Text="Дата з" Margin="3,0,0,2" />
                             <DatePicker Margin="0,0,0,10" SelectedDate="{Binding Table.FromDate, Mode=TwoWay}" />
 
-                            <TextBlock Text="Дата по" Margin="0,0,0,2" />
+                            <TextBlock Text="Дата по" Margin="3,0,0,2" />
                             <DatePicker Margin="0,0,0,12" SelectedDate="{Binding Table.ToDate, Mode=TwoWay}" />
 
                             <Button Content="Сьогодні"

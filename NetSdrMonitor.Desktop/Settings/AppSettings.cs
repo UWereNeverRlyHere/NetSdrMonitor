@@ -19,8 +19,11 @@ public sealed record AppSettings
                 DropProbability           = 0.01,
     };
 
+    // генератор сигналів мока: діапазон «станцій» і шанс лишитися біля тієї ж станції
+    public RandomSignalGeneratorOptions Generator { get; init; } = new();
+
     // тема оформлення UI: світла, темна або синхронізація з темою Windows
-    public AppTheme Theme { get; init; } = AppTheme.System;
+    public AppTheme Theme { get; init; } = AppTheme.Light;
 
     public bool HideMainWindowOnStartup { get; init; }
 

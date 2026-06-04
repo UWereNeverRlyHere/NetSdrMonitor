@@ -41,6 +41,13 @@
             <!-- спільний стиль таблиць: «шашка» рядків (парні/непарні — трохи різний фон).
                  рідний шаблон WPF-UI бере фон рядка з RowBackground/AlternatingRowBackground за AlternationIndex -->
             <Style x:Key="AppDataGrid" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+                <Style.Resources>
+                    <!-- фон виділеного/наведеного рядка шаблон WPF-UI бере саме з цих кистей —
+                         підміняємо на напівпрозорий синій, щоб виділення явно відрізнялось від «шашки» -->
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#550078D4" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#550078D4" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#660078D4" />
+                </Style.Resources>
                 <Setter Property="AlternationCount" Value="2" />
                 <Setter Property="RowBackground" Value="Transparent" />
                 <!-- напівпрозорий сірий: видно «шашку» і на світлій, і на темній темі (тема-незалежний) -->

@@ -15,6 +15,9 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
    [ObservableProperty] private double _malformedFrameProbability = source.Mock.MalformedFrameProbability;
    [ObservableProperty] private double _unknownControlProbability = source.Mock.UnknownControlProbability;
    [ObservableProperty] private double _dropProbability = source.Mock.DropProbability;
+   [ObservableProperty] private double _minCenterMhz = source.Generator.MinCenterHz / 1_000_000.0;
+   [ObservableProperty] private double _maxCenterMhz = source.Generator.MaxCenterHz / 1_000_000.0;
+   [ObservableProperty] private double _sameStationProbability = source.Generator.SameStationProbability;
    [ObservableProperty] private bool   _hideMainWindowOnStartup = source.HideMainWindowOnStartup;
    [ObservableProperty] private bool   _useInMemoryStorage = source.UseInMemoryStorage;
    [ObservableProperty] private bool   _useMedianFrequency = source.UseMedianFrequency;
@@ -49,6 +52,12 @@ public sealed partial class SettingsViewModel(AppSettings source) : ObservableOb
                MalformedFrameProbability = MalformedFrameProbability,
                UnknownControlProbability = UnknownControlProbability,
                DropProbability           = DropProbability,
+         },
+         Generator = source.Generator with
+         {
+               MinCenterHz            = (ulong)(MinCenterMhz * 1_000_000),
+               MaxCenterHz            = (ulong)(MaxCenterMhz * 1_000_000),
+               SameStationProbability = SameStationProbability,
          },
          HideMainWindowOnStartup = HideMainWindowOnStartup,
          UseInMemoryStorage      = UseInMemoryStorage,

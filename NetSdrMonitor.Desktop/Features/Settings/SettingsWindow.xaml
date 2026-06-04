@@ -100,6 +100,29 @@
                     <ctrl:NumericSpinner Grid.Row="3" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding DropProbability}" />
                 </Grid>
 
+                <TextBlock Text="Генератор сигналів" FontWeight="Bold" Margin="0,10,0,3" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="120" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Частота станцій від, МГц" VerticalAlignment="Center" Margin="0,3" />
+                    <ctrl:NumericSpinner Grid.Row="0" Grid.Column="1" Margin="0,3" Step="1" Minimum="0" Value="{Binding MinCenterMhz}" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Частота станцій до, МГц" VerticalAlignment="Center" Margin="0,3" />
+                    <ctrl:NumericSpinner Grid.Row="1" Grid.Column="1" Margin="0,3" Step="1" Minimum="0" Value="{Binding MaxCenterMhz}" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Шанс тієї ж станції" VerticalAlignment="Center" Margin="0,3"
+                               ToolTip="0..1 (0.9 = 90%): шанс, що сигнал лишиться біля тієї ж станції й потрапить у той самий запис" />
+                    <ctrl:NumericSpinner Grid.Row="2" Grid.Column="1" Margin="0,3" Step="0.05" Minimum="0" Maximum="1" Value="{Binding SameStationProbability}" />
+                </Grid>
+
                 <TextBlock Text="Таблиця" FontWeight="Bold" Margin="0,14,0,3" />
                 <CheckBox Content="Показувати медіану частоти"
                           IsChecked="{Binding UseMedianFrequency}"

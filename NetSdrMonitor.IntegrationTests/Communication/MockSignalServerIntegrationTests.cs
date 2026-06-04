@@ -107,8 +107,8 @@ public sealed class MockSignalServerIntegrationTests
     // Декодований сигнал має лежати в межах, які закладає RandomSignalGenerator (інакше це не справжній сигнал).
     private static void AssertPlausible(Signal signal)
     {
-        // станція 1..30 МГц + джитер у межах смуги (макс смуга 50 кГц => |джитер| < 25 кГц)
-        Assert.InRange(signal.FrequencyHz, 1_000_000UL - 50_000, 30_000_000UL + 50_000);
+        // станція 1..120 МГц (типовий діапазон генератора) + джитер у межах смуги (макс смуга 50 кГц => |джитер| < 25 кГц)
+        Assert.InRange(signal.FrequencyHz, 1_000_000UL - 50_000, 120_000_000UL + 50_000);
         Assert.Contains(signal.BandwidthHz, new uint[] { 5_000, 10_000, 25_000, 50_000 });
         Assert.InRange(signal.SnrDb, 5.0, 40.0);
     }

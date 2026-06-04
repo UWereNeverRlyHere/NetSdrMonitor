@@ -18,7 +18,7 @@ public sealed class SdrMonitorFactory(JsonSettingsStore store, ILoggerFactory lo
     {
         AppSettings settings = store.Load();
 
-        var generator = new RandomSignalGenerator();
+        var generator = new RandomSignalGenerator(options: settings.Generator);
         var mock = new MockSignalServer(
             new IPEndPoint(IPAddress.Loopback, 0),
             generator,
