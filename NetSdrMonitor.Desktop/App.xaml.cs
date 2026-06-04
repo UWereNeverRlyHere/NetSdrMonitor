@@ -43,13 +43,18 @@ public partial class App : Application
 
          var main = new MainWindow(_simulation, store);
          MainWindow = main;
-         ThemeApplier.Initialize(main, settings.Theme);
          main.Tray.Attach(_simulation, store);
 
          if (settings.HideMainWindowOnStartup)
             main.Hide();
          else
             main.Show();
+
+         // тему застосовуємо вже ПІСЛЯ показу вікна: ApplicationThemeManager і SystemThemeWatcher
+         // коректно чіпляються лише коли у вікна є дескриптор. Якщо застосувати до показу — тема
+         // «недозастосовується» (видно лише після ручної зміни), а вікно лишається в крихкому стані,
+         // через що модальні діалоги (напр. налаштування) при закритті можуть ховати головне вікно
+         ThemeApplier.Initialize(main, settings.Theme);
 
          await _simulation.StartAsync();
       }

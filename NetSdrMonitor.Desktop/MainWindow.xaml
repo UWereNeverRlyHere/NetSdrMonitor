@@ -36,7 +36,6 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" MinHeight="140" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition x:Name="ConsoleRow" Height="0" />
@@ -81,46 +80,90 @@
                 </DockPanel>
             </Border>
 
-            <!-- панель фільтрації -->
-            <Border Grid.Row="1" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="8,6">
-                <DockPanel LastChildFill="False">
-                    <TextBlock DockPanel.Dock="Left" Text="Пошук:" VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <TextBox DockPanel.Dock="Left" Width="160" VerticalAlignment="Center"
-                             Text="{Binding Table.SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <!-- основна область: ліворуч фіксована панель фільтрів, праворуч таблиця -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="230" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                    <TextBlock DockPanel.Dock="Left" Text="SNR ≥" VerticalAlignment="Center" Margin="16,0,6,0" />
-                    <ctrl:NumericSpinner DockPanel.Dock="Left" Width="64" Height="32" VerticalAlignment="Center"
-                                         IntegerOnly="True" Minimum="0" Maximum="40" Step="1" Value="{Binding Table.MinSnrDb}" />
+                <!-- ліва панель: лічильник записів + фільтри (фіксована ширина, зі скролом на низькому вікні) -->
+                <Border Grid.Column="0" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+                    <DockPanel>
+                        <!-- закріплено НАД скролом: лічильник + дії (скинути фільтр / очистити журнал) -->
+                        <StackPanel DockPanel.Dock="Top" Margin="10,10,10,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <!-- кількість показаних записів (з урахуванням активного фільтра) -->
+                                <TextBlock Text="{Binding Table.VisibleCount, StringFormat='Всього записів: {0}'}"
+                                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <!-- вертикальний роздільник між лічильником і діями -->
+                                <Border Width="1" Margin="8,2" VerticalAlignment="Stretch"
+                                        Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                                <Button Click="OnResetFilter"
+                                        Style="{StaticResource AppButton}"
+                                        Width="28" Height="28" Padding="0" Margin="0,0,8,0"
+                                        VerticalAlignment="Center" ToolTip="Скинути фільтр">
+                                    <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Button>
+                                <Button Click="OnClearLog"
+                                        Style="{StaticResource AppButton}"
+                                        Width="28" Height="28" Padding="0"
+                                        VerticalAlignment="Center" ToolTip="Очистити журнал">
+                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Button>
+                            </StackPanel>
+                            <Separator Margin="0,0,0,8" />
+                        </StackPanel>
 
-                    <TextBlock DockPanel.Dock="Left" Text="Сигналів ≥" VerticalAlignment="Center" Margin="16,0,6,0" />
-                    <ctrl:NumericSpinner DockPanel.Dock="Left" Width="64" Height="32" VerticalAlignment="Center"
-                                         IntegerOnly="True" Minimum="0" Step="1" Value="{Binding Table.MinSignalCount}" />
+                        <!-- прокручувані фільтри (заповнюють решту висоти панелі) -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="10,0,10,10">
+                            <TextBlock Text="{Binding Table.FrequencyFilterTitle}" Margin="0,0,0,2" />
+                            <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
+                                                 Minimum="0" Step="1"
+                                                 Value="{Binding Table.MinFrequencyMhz}" />
 
-                    <!-- фільтр за датою: діапазон С/По (календарик) + швидкий «Сьогодні» -->
-                    <TextBlock DockPanel.Dock="Left" Text="Дата:" VerticalAlignment="Center" Margin="16,0,6,0" />
-                    <DatePicker DockPanel.Dock="Left" Width="120" VerticalAlignment="Center"
-                                SelectedDate="{Binding Table.FromDate, Mode=TwoWay}" />
-                    <TextBlock DockPanel.Dock="Left" Text="—" VerticalAlignment="Center" Margin="4,0" />
-                    <DatePicker DockPanel.Dock="Left" Width="120" VerticalAlignment="Center"
-                                SelectedDate="{Binding Table.ToDate, Mode=TwoWay}" />
-                    <Button DockPanel.Dock="Left" Content="Сьогодні"
-                            Command="{Binding Table.TodayCommand}"
-                            Style="{StaticResource AppButton}"
-                            Height="32" Padding="10,3" Margin="6,0,0,0" />
+                            <TextBlock Text="Смуга ≥, кГц" Margin="0,0,0,2" />
+                            <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
+                                                 Minimum="0" Step="5"
+                                                 Value="{Binding Table.MinBandwidthKhz}" />
 
-                    <Button DockPanel.Dock="Right" Content="Очистити журнал"
-                            Click="OnClearLog" 
-                            Style="{StaticResource AppButton}"
-                            Height="32" Padding="10,3" Margin="8,0,0,0" />
-                    <Button DockPanel.Dock="Right" Content="Скинути фільтр"
-                            Click="OnResetFilter" 
-                            Style="{StaticResource AppButton}"
-                            Height="32"  Padding="10,3" />
-                </DockPanel>
-            </Border>
+                           
+                            <TextBlock Text="SNR ≥" Margin="0,0,0,2" />
+                            <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
+                                                 IntegerOnly="True" Minimum="0" Maximum="40" Step="1"
+                                                 Value="{Binding Table.MinSnrDb}" />
+
+                            <TextBlock Text="Сигналів ≥" Margin="0,0,0,2" />
+                            <ctrl:NumericSpinner Height="32" Margin="0,0,0,10"
+                                                 IntegerOnly="True" Minimum="0" Step="1"
+                                                 Value="{Binding Table.MinSignalCount}" />
+                            <TextBlock Text="Час ≥ (год:хв)" Margin="0,0,0,2" />
+                            <TextBox Margin="0,0,0,10"
+                                     Text="{Binding Table.MinTimeText, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Дата з" Margin="0,0,0,2" />
+                            <DatePicker Margin="0,0,0,10" SelectedDate="{Binding Table.FromDate, Mode=TwoWay}" />
+
+                            <TextBlock Text="Дата по" Margin="0,0,0,2" />
+                            <DatePicker Margin="0,0,0,12" SelectedDate="{Binding Table.ToDate, Mode=TwoWay}" />
+
+                            <Button Content="Сьогодні"
+                                    Command="{Binding Table.TodayCommand}"
+                                    Style="{StaticResource AppButton}"
+                                    HorizontalAlignment="Stretch" Height="32" Margin="0,0,0,8" />
+
+                      
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
 
             <!-- таблиця агрегованих записів: заголовки, виділення й чергування рядків бере тема WPF-UI -->
-            <DataGrid x:Name="SignalsGrid" Grid.Row="2"
+            <DataGrid x:Name="SignalsGrid" Grid.Column="1"
                       Style="{StaticResource AppDataGrid}"
                       ItemsSource="{Binding Table.RowsView}"
                       AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
@@ -131,6 +174,7 @@
                       BorderThickness="0" FontSize="14"
                       PreviewMouseRightButtonDown="OnRowRightClick"
                       Loaded="OnGridLoaded" ColumnReordered="OnColumnsChanged"
+                      Sorting="OnGridSorting"
                       behaviors:RowAppearAnimation.Enabled="True">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
@@ -138,14 +182,15 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="date" Header="Дата" 
+                    <!-- Дата й Час — пов'язана пара: сортуються разом, стрілка стоїть на обох -->
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="date" Header="Дата"
                                         MinWidth="100" Width="110" MaxWidth="200"
+                                        SortMemberPath="Date" SortDirection="Descending"
                                         Binding="{Binding Time, StringFormat='{}{0:dd.MM.yyyy}'}"
                                         ElementStyle="{StaticResource CellCenter}" />
-                    <!-- SortDirection лише показує стрілку в заголовку; саме сортування тримає RowsView -->
-                    <DataGridTextColumn behaviors:ColumnLayout.Key="time" Header="Час" 
+                    <DataGridTextColumn behaviors:ColumnLayout.Key="time" Header="Час"
                                         MinWidth="100" Width="110" MaxWidth="200"
-                                        SortDirection="Descending"
+                                        SortMemberPath="Time" SortDirection="Descending"
                                         Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}"
                                         ElementStyle="{StaticResource CellCenter}" />
                     <DataGridTextColumn behaviors:ColumnLayout.Key="freq"
@@ -167,14 +212,15 @@
                                         ElementStyle="{StaticResource CellCenter}" />
                 </DataGrid.Columns>
             </DataGrid>
+            </Grid>
 
             <!-- роздільник між таблицею та консоллю: тягнемо мишею, висота запам'ятовується -->
-            <GridSplitter x:Name="ConsoleSplitter" Grid.Row="3" Height="5" Visibility="Collapsed"
+            <GridSplitter x:Name="ConsoleSplitter" Grid.Row="2" Height="5" Visibility="Collapsed"
                           HorizontalAlignment="Stretch" VerticalAlignment="Center"
                           ResizeBehavior="PreviousAndNext" ResizeDirection="Rows" Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
 
             <!-- нижня консоль логів монітора (видимість — за налаштуванням) -->
-            <console:ConsoleView x:Name="ConsoleHost" Grid.Row="4" Visibility="Collapsed"
+            <console:ConsoleView x:Name="ConsoleHost" Grid.Row="3" Visibility="Collapsed"
                                  DataContext="{Binding Console}" />
         </Grid>
     </DockPanel>

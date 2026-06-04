@@ -11,7 +11,7 @@
                 <ui:ThemesDictionary Theme="Light" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
-            <!-- стиль кнопок: успадковує рідний вигляд WPF-UI, додає лише курсор-палець і темний фон при наведенні (решту шаблону не чіпаємо) -->
+            <!-- стиль кнопок: успадковує рідний вигляд WPF-UI, додає лише курсор-палець і темний фон при наведенні -->
             <Style x:Key="AppButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                 <Setter Property="Cursor" Value="Hand" />
                 <Style.Resources>
@@ -26,7 +26,6 @@
                 </Style.Triggers>
             </Style>
             
-            <!-- той самий ефект наведення для стрілок-RepeatButton -->
             <Style x:Key="AppRepeatButton" TargetType="RepeatButton" BasedOn="{StaticResource {x:Type RepeatButton}}">
                 <Setter Property="Cursor" Value="Hand" />
                 <Style.Resources>
@@ -42,6 +41,11 @@
             <!-- спільний стиль таблиць: «шашка» рядків (парні/непарні — трохи різний фон).
                  рідний шаблон WPF-UI бере фон рядка з RowBackground/AlternatingRowBackground за AlternationIndex -->
             <Style x:Key="AppDataGrid" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+                <Style.Resources>
+                    <!-- фон виділеного (і наведеного) рядка: рідний шаблон бере його саме з цього ключа.
+                         робимо напівпрозорий синій — явно відрізняється від сірої «шашки», читабельний на обох темах -->
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="#552D7FF6" />
+                </Style.Resources>
                 <Setter Property="AlternationCount" Value="2" />
                 <Setter Property="RowBackground" Value="Transparent" />
                 <!-- напівпрозорий сірий: видно «шашку» і на світлій, і на темній темі (тема-незалежний) -->

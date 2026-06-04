@@ -30,6 +30,11 @@ public sealed partial class SignalRecordRow : ObservableObject, IAnimatedRow
    public DateTime Time => _record.First.Timestamp.LocalDateTime;
 
    /// <summary>
+   /// Дата детекції без часу — первинний ключ сортування таблиці (день перед часом доби).
+   /// </summary>
+   public DateTime Date => Time.Date;
+
+   /// <summary>
    /// Частота для колонки в МГц: медіана або перша частота — залежно від режиму.
    /// </summary>
    public double FrequencyMhz => _record.DisplayFrequencyHz(_mode) / 1_000_000.0;

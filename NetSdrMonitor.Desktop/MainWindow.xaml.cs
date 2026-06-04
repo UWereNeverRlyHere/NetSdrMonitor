@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -101,12 +102,56 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnResetFilter(object sender, RoutedEventArgs e)
     {
-        _simulation.Table.SearchText     = string.Empty;
-        _simulation.Table.MinSnrDb       = 0;
-        _simulation.Table.MinSignalCount = 0;
-        _simulation.Table.FromDate       = null;
-        _simulation.Table.ToDate         = null;
+        _simulation.Table.MinFrequencyMhz = 0;
+        _simulation.Table.MinBandwidthKhz = 0;
+        _simulation.Table.MinTimeText     = string.Empty;
+        _simulation.Table.MinSnrDb        = 0;
+        _simulation.Table.MinSignalCount  = 0;
+        _simulation.Table.FromDate        = null;
+        _simulation.Table.ToDate          = null;
     }
+
+    // ключі пов'язаної пари колонок, що сортуються як одне ціле (день, потім час доби)
+    private static readonly string[] DateTimeKeys = { "date", "time" };
+
+    // Дата й Час — одна логічна вісь (момент детекції), тож сортуємо їх разом: інакше клік по «Час»
+    // упорядкував би лише за часом доби й до найсвіжіших могли б домішатись учорашні записи
+    private void OnGridSorting(object sender, DataGridSortingEventArgs e)
+    {
+        if (ColumnLayout.GetKey(e.Column) is not { } key || !DateTimeKeys.Contains(key))
+            return; // решта колонок — штатне сортування DataGrid
+
+        e.Handled = true;
+
+        // напрям беремо за поточною стрілкою пари; перший клік по «свіжій» парі дає спадання (новіші зверху)
+        DataGridColumn? dateColumn = ColumnByKey("date");
+        ListSortDirection direction = dateColumn?.SortDirection == ListSortDirection.Descending
+            ? ListSortDirection.Ascending
+            : ListSortDirection.Descending;
+
+        ApplyDateTimeSort(direction);
+    }
+
+    // переписує сортування подання на пару [Дата, Час] в одному напрямі й ставить стрілку на обидві колонки
+    private void ApplyDateTimeSort(ListSortDirection direction)
+    {
+        ICollectionView view = _simulation.Table.RowsView;
+        using (view.DeferRefresh())
+        {
+            view.SortDescriptions.Clear();
+            view.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Date), direction));
+            view.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Time), direction));
+        }
+
+        // стрілку лишаємо лише на парі «Дата/Час», з інших колонок знімаємо
+        foreach (DataGridColumn column in SignalsGrid.Columns)
+            column.SortDirection = ColumnLayout.GetKey(column) is { } key && DateTimeKeys.Contains(key)
+                ? direction
+                : null;
+    }
+
+    private DataGridColumn? ColumnByKey(string key) =>
+        SignalsGrid.Columns.FirstOrDefault(c => ColumnLayout.GetKey(c) == key);
 
     private void OnGridLoaded(object sender, RoutedEventArgs e)
     {

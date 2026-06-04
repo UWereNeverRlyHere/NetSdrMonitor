@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Data;
@@ -27,6 +28,9 @@ public sealed partial class MonitorViewModel : ObservableObject
    // обмеження розбору за один тік — захист UI від сплеску за дуже високого темпу прийому
    private const int MaxDrainPerTick = 5_000;
 
+   // допустимі формати вводу нижньої межі за часом доби
+   private static readonly string[] TimeFormats = { "H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss" };
+
    private readonly ConcurrentQueue<Signal> _inbox = new();
    private readonly DispatcherTimer _pump;
 
@@ -39,7 +43,16 @@ public sealed partial class MonitorViewModel : ObservableObject
    private bool _useMedian = true; // за замовчуванням показуємо медіану за частотою
 
    [ObservableProperty]
-   private string _searchText = string.Empty;
+   private double _minFrequencyMhz;
+
+   [ObservableProperty]
+   private double _minBandwidthKhz;
+
+   // нижня межа за часом доби у форматі «год:хв»; порожньо/некоректно — фільтр за часом вимкнено
+   [ObservableProperty]
+   private string _minTimeText = string.Empty;
+
+   private TimeSpan? _minTimeOfDay;
 
    [ObservableProperty]
    private double _minSnrDb;
@@ -60,8 +73,14 @@ public sealed partial class MonitorViewModel : ObservableObject
       RowsView = CollectionViewSource.GetDefaultView(Rows);
       RowsView.Filter = FilterRow;
 
-      // за замовчуванням — найновіші зверху; клік по заголовку колонки переписує сортування
+      // за замовчуванням — найновіші зверху: дата й час сортуються як єдине ціле (спершу день,
+      // потім час доби), тож «найсвіжіше» — це найновіший момент, а не лише час доби.
+      // клік по заголовку Дати/Часу перемикає напрям одразу для пари (див. MainWindow.OnGridSorting)
+      RowsView.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Date), ListSortDirection.Descending));
       RowsView.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Time), ListSortDirection.Descending));
+
+      // склад подання змінюється при додаванні рядків і при оновленні фільтра — оновлюємо лічильник
+      ((INotifyCollectionChanged)RowsView).CollectionChanged += (_, _) => OnPropertyChanged(nameof(VisibleCount));
 
       _pump = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
       _pump.Tick += (_, _) => Drain();
@@ -81,6 +100,16 @@ public sealed partial class MonitorViewModel : ObservableObject
    /// Заголовок колонки частоти: «Медіана» в режимі медіани, інакше «Частота».
    /// </summary>
    public string FrequencyColumnTitle => UseMedian ? "Медіана, МГц" : "Частота, МГц";
+
+   /// <summary>
+   /// Підпис фільтра за частотою — узгоджений із заголовком колонки.
+   /// </summary>
+   public string FrequencyFilterTitle => UseMedian ? "Медіана ≥, МГц" : "Частота ≥, МГц";
+
+   /// <summary>
+   /// Кількість рядків, показаних у таблиці зараз (тобто з урахуванням активного фільтра).
+   /// </summary>
+   public int VisibleCount => RowsView is CollectionView view ? view.Count : Rows.Count;
 
    /// <summary>
    /// Готує модель до нової сесії: підхоплює сховище, відновлює історію й відкриває агрегатор.
@@ -200,6 +229,13 @@ public sealed partial class MonitorViewModel : ObservableObject
       if (row.SnrDb < MinSnrDb)
          return false;
 
+      // числові нижні межі (0 — фільтр вимкнено, бо значення завжди ≥ 0)
+      if (row.FrequencyMhz < MinFrequencyMhz)
+         return false;
+
+      if (row.BandwidthKhz < MinBandwidthKhz)
+         return false;
+
       // фільтр за датою — порівнюємо день запису з межами (включно з обома кінцями)
       DateTime day = row.Time.Date;
       if (FromDate is { } from && day < from.Date)
@@ -208,25 +244,36 @@ public sealed partial class MonitorViewModel : ObservableObject
       if (ToDate is { } to && day > to.Date)
          return false;
 
-      if (string.IsNullOrWhiteSpace(SearchText))
-         return true;
+      // нижня межа за часом доби (год:хв) — незалежно від дати
+      if (_minTimeOfDay is { } minTime && row.Time.TimeOfDay < minTime)
+         return false;
 
-      // вільний пошук по текстовому представленню УСІХ колонок рядка (час + числові), культурою показу
-      string haystack = string.Create(CultureInfo.CurrentCulture,
-         $"{row.Time:HH:mm:ss.fff} {row.FrequencyMhz:F3} {row.BandwidthKhz:F1} {row.SnrDb:F1} {row.Count}");
-      return haystack.Contains(SearchText.Trim(), StringComparison.OrdinalIgnoreCase);
+      return true;
    }
 
    partial void OnUseMedianChanged(bool value)
    {
       OnPropertyChanged(nameof(FrequencyColumnTitle));
+      OnPropertyChanged(nameof(FrequencyFilterTitle));
 
       FrequencyMode mode = CurrentMode;
       foreach (SignalRecordRow row in Rows)
          row.SetMode(mode);
    }
 
-   partial void OnSearchTextChanged(string value) => RowsView.Refresh();
+   partial void OnMinFrequencyMhzChanged(double value) => RowsView.Refresh();
+
+   partial void OnMinBandwidthKhzChanged(double value) => RowsView.Refresh();
+
+   // розбираємо «год:хв» (або «год:хв:сек»); порожньо/некоректно — межу за часом знімаємо
+   partial void OnMinTimeTextChanged(string value)
+   {
+      _minTimeOfDay = DateTime.TryParseExact(value?.Trim(), TimeFormats,
+                                             CultureInfo.CurrentCulture, DateTimeStyles.None, out DateTime parsed)
+         ? parsed.TimeOfDay
+         : null;
+      RowsView.Refresh();
+   }
 
    partial void OnMinSnrDbChanged(double value) => RowsView.Refresh();
 
