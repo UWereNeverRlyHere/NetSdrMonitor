@@ -11,7 +11,7 @@ namespace NetSdrMonitor.Communication.Server;
 public sealed class RandomSignalGenerator
 {
     private const ulong MinCenterHz = 1_000_000;   // 1 МГц
-    private const ulong MaxCenterHz = 30_000_000;  // 30 МГц
+    private const ulong MaxCenterHz = 150_000_000;  // 150 МГц
 
     private static readonly uint[] Bandwidths = [5_000, 10_000, 25_000, 50_000]; // Гц
 
@@ -21,10 +21,16 @@ public sealed class RandomSignalGenerator
     private ulong _centerHz;
     private uint  _bandwidthHz;
 
-    public RandomSignalGenerator(int? seed = null, double retuneProbability = 0.15)
+    /// <param name="seed">Сід для відтворюваності; null — недетерміновано.</param>
+    /// <param name="sameRecordChancePercent">
+    /// Шанс у відсотках (0..100), що наступний сигнал лишиться біля тієї самої станції й потрапить
+    /// у той самий запис. Перестроювання на нову частоту відбувається з доповнюючою ймовірністю.
+    /// </param>
+    public RandomSignalGenerator(int? seed = null, int sameRecordChancePercent = 90)
     {
         _random = seed is { } s ? new Random(s) : new Random();
-        _retuneProbability = retuneProbability;
+        // відсоток «лишитись» -> ймовірність перестроїтись (тобто відкрити новий запис)
+        _retuneProbability = 1.0 - Math.Clamp(sameRecordChancePercent, 0, 100) / 100.0;
         Retune();
     }
 

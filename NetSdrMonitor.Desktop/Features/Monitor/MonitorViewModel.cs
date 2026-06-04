@@ -181,8 +181,21 @@ public sealed partial class MonitorViewModel : ObservableObject
 
    // --- перезавантаження набору (історія) ---
 
-   // сервіс просить перечитати весь набір (старт сесії / очистка) — маршалимо на UI-потік
-   private void OnSourceChanged() => _ui.Post(_ => _ = ReloadAsync(), null);
+   // сервіс просить перечитати весь набір (старт сесії / очистка) — маршалимо на UI-потік.
+   // спершу відкидаємо хвіст подій попереднього набору, щоб старі рядки не просочились у нову сесію
+   private void OnSourceChanged() => _ui.Post(_ => ReloadFromSource(), null);
+
+   // нова сесія/очистка: відкидаємо хвіст подій попереднього набору (щоб старі рядки не просочились),
+   // скидаємо «живий» рядок і перечитуємо набір заново
+   private void ReloadFromSource()
+   {
+      while (_pending.TryDequeue(out _))
+      {
+      }
+
+      _openRow = null;
+      _ = ReloadAsync();
+   }
 
    // діапазон дат: БД перечитує набір (усі записи проміжку, без ліміту); пам'ять — клієнтський фільтр
    private void OnRangeChanged()

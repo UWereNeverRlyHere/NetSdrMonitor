@@ -37,7 +37,11 @@ public sealed class JsonSettingsStore
     {
         try
         {
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(settings, Options));
+            // пишемо в тимчасовий файл і атомарно підміняємо: обірваний запис (вихід через трей,
+            // стоп відладчика) не псує наявний settings.json і не скидає всі настройки в дефолт
+            string tempPath = FilePath + ".tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(settings, Options));
+            File.Move(tempPath, FilePath, overwrite: true);
         }
         catch
         {

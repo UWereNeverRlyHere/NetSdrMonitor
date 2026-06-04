@@ -118,6 +118,12 @@ public sealed class MockSignalServer : ISignalServer
          await Task.WhenAll(Quiet(receive), Quiet(pump));
          await reader.CompleteAsync();
       }
+      catch (Exception ex)
+      {
+         // сесія не має валити accept-цикл: інакше зафейлена задача відсіється RemoveAll до await
+         // й виняток лишиться неспостереженим. Гасимо тут, зафіксувавши причину.
+         _logger.LogWarning(ex, "Client session faulted");
+      }
       finally
       {
          sendGate.Dispose();

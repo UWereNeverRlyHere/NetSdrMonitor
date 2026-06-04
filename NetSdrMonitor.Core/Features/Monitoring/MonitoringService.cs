@@ -52,32 +52,41 @@ public sealed class MonitoringService(
         if (IsRunning)
             return;
 
-        // сховище сесії під поточні настройки; обидва сервіси бачать його через RecordSession
-        SessionStore store = await storeFactory.CreateAsync();
-        session.Begin(store.Repository, store.IsPersistent);
-
-        _aggregator = SignalAggregator.Create()
-            .OnRecordOpened(record => RecordChanged?.Invoke(new RecordChange { Record = record, Kind = RecordChangeKind.Opened }))
-            .OnSignalAppended((record, _) => RecordChanged?.Invoke(new RecordChange { Record = record, Kind = RecordChangeKind.Updated }))
-            .OnRecordClosed((record, _) =>
-            {
-                RecordChanged?.Invoke(new RecordChange { Record = record, Kind = RecordChangeKind.Closed });
-                _persistChain = ChainPersistAsync(_persistChain, record); // закритий запис осідає у сховище
-            })
-            .Build();
-
-        _persistChain = Task.CompletedTask;
-
-        _monitor = monitorFactory.Create();
-        _monitor.StatusChanged += OnMonitorStatus;
-
-        Interlocked.Exchange(ref _received, 0);
-        _drainCts = new CancellationTokenSource();
-        _drainTask = Task.Run(() => DrainAsync(_monitor, _drainCts.Token));
-
-        _monitor.Start();
+        // ранній страж від повторного старту: UI встигає натиснути «старт» двічі, доки триває await нижче
         IsRunning = true;
-        SourceChanged?.Invoke(); // UI вантажить стартовий «хвіст» (або діапазон, якщо фільтр уже стоїть)
+        try
+        {
+            // сховище сесії під поточні настройки; обидва сервіси бачать його через RecordSession
+            SessionStore store = await storeFactory.CreateAsync();
+            session.Begin(store.Repository, store.IsPersistent);
+
+            _aggregator = SignalAggregator.Create()
+                .OnRecordOpened(record => RecordChanged?.Invoke(new RecordChange { Record = record, Kind = RecordChangeKind.Opened }))
+                .OnSignalAppended((record, _) => RecordChanged?.Invoke(new RecordChange { Record = record, Kind = RecordChangeKind.Updated }))
+                .OnRecordClosed((record, _) =>
+                {
+                    RecordChanged?.Invoke(new RecordChange { Record = record, Kind = RecordChangeKind.Closed });
+                    _persistChain = ChainPersistAsync(_persistChain, record); // закритий запис осідає у сховище
+                })
+                .Build();
+
+            _persistChain = Task.CompletedTask;
+
+            _monitor = monitorFactory.Create();
+            _monitor.StatusChanged += OnMonitorStatus;
+
+            Interlocked.Exchange(ref _received, 0);
+            _drainCts = new CancellationTokenSource();
+            _drainTask = Task.Run(() => DrainAsync(_monitor, _drainCts.Token));
+
+            _monitor.Start();
+            SourceChanged?.Invoke(); // UI вантажить стартовий «хвіст» (або діапазон, якщо фільтр уже стоїть)
+        }
+        catch
+        {
+            IsRunning = false; // старт не вдався — знімаємо прапор, щоб можна було спробувати знову
+            throw;
+        }
     }
 
     /// <summary>
