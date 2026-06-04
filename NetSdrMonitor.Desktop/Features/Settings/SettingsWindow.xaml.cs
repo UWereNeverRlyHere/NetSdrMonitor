@@ -52,6 +52,19 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
          dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
       _open = dialog;
+
+      // Корінь проблеми «з трея»: WPF після закриття модального вікна повертає активність ПОПЕРЕДНЬО
+      // активному вікну. Коли налаштування відкрито з трея, попередньо активним є службове вікно меню
+      // трея, а не головне вікно — тож воно не відновлюється й візуально «провалюється»/ховається.
+      // Лік: робимо власника активним ДО показу діалога, щоб саме йому повернулась активність на закритті.
+      if (owner is { IsVisible: true })
+      {
+         if (owner.WindowState == WindowState.Minimized)
+            owner.WindowState = WindowState.Normal;
+
+         owner.Activate();
+      }
+
       try
       {
          if (dialog.ShowDialog() == true && dialog.Saved is { } saved)
@@ -60,6 +73,13 @@ public partial class SettingsWindow : Wpf.Ui.Controls.FluentWindow
       finally
       {
          _open = null;
+
+         // підстраховка: якщо власника все одно згорнуло, повертаємо його (схований у трей не чіпаємо)
+         if (owner is { IsVisible: true, WindowState: WindowState.Minimized })
+         {
+            owner.WindowState = WindowState.Normal;
+            owner.Activate();
+         }
       }
    }
 

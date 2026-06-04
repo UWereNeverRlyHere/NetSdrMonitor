@@ -14,7 +14,7 @@ public sealed record AppSettings
     // (саме ядро мока за замовчуванням детерміноване — нулі; вмикає демо тут)
     public MockSignalServerOptions Mock { get; init; } = new()
     {
-                MalformedFrameProbability = 0.05,
+                MalformedFrameProbability = 0.04,
                 UnknownControlProbability = 0.03,
                 DropProbability           = 0.01,
     };

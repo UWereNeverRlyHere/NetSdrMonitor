@@ -1,15 +1,15 @@
-using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using NetSdrMonitor.Desktop.Behaviors;
 using NetSdrMonitor.Desktop.Features.Monitor;
 using NetSdrMonitor.Desktop.Features.Settings;
 using NetSdrMonitor.Desktop.Settings;
 using NetSdrMonitor.Desktop.Shell;
+using Wpf.Ui.Controls;
 
 namespace NetSdrMonitor.Desktop;
 
@@ -17,7 +17,7 @@ namespace NetSdrMonitor.Desktop;
 /// Головне вікно. «Закриття» ховає його у трей; вихід — лише через меню трея.
 /// Розкладку колонок (порядок і ширина) відновлюємо при показі та зберігаємо при змінах.
 /// </summary>
-public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
+public partial class MainWindow : FluentWindow
 {
     private const double DefaultConsoleHeight = 180; // ≈28% від типової висоти вікна
 
@@ -48,6 +48,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         ApplyConsole(_simulation.ShowConsole);
     }
 
+   
     private void OnToggle(object sender, RoutedEventArgs e) => _ = _simulation.ToggleAsync();
 
     private void OnSettings(object sender, RoutedEventArgs e) => SettingsWindow.OpenOrActivate(this, _store.Load(), _store, saved => _ = _simulation.UpdateSettingsAsync(saved));

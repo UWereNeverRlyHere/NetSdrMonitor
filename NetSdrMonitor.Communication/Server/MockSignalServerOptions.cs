@@ -10,7 +10,7 @@ public sealed record MockSignalServerOptions
     /// <summary>
     /// Пауза між сигналами, коли приймач у стані Run.
     /// </summary>
-    public TimeSpan SendInterval { get; init; } = TimeSpan.FromMilliseconds(200);
+    public TimeSpan SendInterval { get; init; } = TimeSpan.FromMilliseconds(800);
 
     /// <summary>
     /// Імовірність підмішати кадр Data Item з тілом неправильного розміру (парсер має відхилити).
