@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NetSdrMonitor.Core.Features.Monitoring;
+using NetSdrMonitor.Desktop.Controls;
 using NetSdrMonitor.Domain.Aggregation;
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -41,6 +42,7 @@ public sealed partial class MonitorViewModel : ObservableObject
    private SignalRecordRow? _openRow;         // рядок поточного відкритого запису
    private CancellationTokenSource? _loadCts; // скасування попереднього перезавантаження набору
    private TimeSpan? _minTimeOfDay;
+   private bool _spectrumDirty;               // спектр треба перебудувати на наступному тіку помпи
 
    [ObservableProperty]
    private bool _useMedian = true; // за замовчуванням показуємо медіану за частотою
@@ -76,6 +78,10 @@ public sealed partial class MonitorViewModel : ObservableObject
    [ObservableProperty]
    private DateTime? _toDate;
 
+   // проекція видимих записів у точки спектра діапазону (медіана частоти → SNR); оновлюється батчем
+   [ObservableProperty]
+   private IReadOnlyList<SpectrumPoint> _spectrumPoints = [];
+
    public MonitorViewModel(MonitoringService monitoring, RecordFeed feed)
    {
       _monitoring = monitoring;
@@ -90,7 +96,7 @@ public sealed partial class MonitorViewModel : ObservableObject
       RowsView.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Date), ListSortDirection.Descending));
       RowsView.SortDescriptions.Add(new SortDescription(nameof(SignalRecordRow.Time), ListSortDirection.Descending));
 
-      ((INotifyCollectionChanged)RowsView).CollectionChanged += (_, _) => OnPropertyChanged(nameof(VisibleCount));
+      ((INotifyCollectionChanged)RowsView).CollectionChanged += OnRowsViewChanged;
 
       _monitoring.RecordChanged += OnRecordChanged; // фоновий потік сервісу -> черга
       _monitoring.SourceChanged += OnSourceChanged; // повне перезавантаження набору (старт/очистка)
@@ -145,6 +151,32 @@ public sealed partial class MonitorViewModel : ObservableObject
          Apply(change);
          processed++;
       }
+
+      // спектр перебудовуємо раз на тік — сплеск нових/відфільтрованих рядків коалесить в одне оновлення
+      if (_spectrumDirty)
+      {
+         _spectrumDirty = false;
+         RebuildSpectrum();
+      }
+   }
+
+   // видимий (відфільтрований) набір -> точки спектра діапазону: позиція по медіані частоти, висота по SNR.
+   // зсув медіани в межах однієї станції на масштабі всієї смуги під-піксельний, тож реагуємо лише на
+   // появу/зникнення рядків і зміну фільтра (CollectionChanged), а не на кожну детекцію
+   private void RebuildSpectrum()
+   {
+      var points = new List<SpectrumPoint>();
+      foreach (object item in RowsView)
+         if (item is SignalRecordRow row)
+            points.Add(new SpectrumPoint { FrequencyMhz = row.MedianFrequencyMhz, SnrDb = row.SnrDb });
+
+      SpectrumPoints = points;
+   }
+
+   private void OnRowsViewChanged(object? sender, NotifyCollectionChangedEventArgs e)
+   {
+      OnPropertyChanged(nameof(VisibleCount));
+      _spectrumDirty = true;
    }
 
    private void Apply(RecordChange change)

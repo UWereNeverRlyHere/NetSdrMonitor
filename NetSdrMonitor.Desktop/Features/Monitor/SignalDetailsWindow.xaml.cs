@@ -1,4 +1,5 @@
 using System.Globalization;
+using NetSdrMonitor.Desktop.Controls;
 using NetSdrMonitor.Desktop.Features.Windowing;
 using NetSdrMonitor.Desktop.Settings;
 using Wpf.Ui.Controls;
@@ -15,9 +16,15 @@ public partial class SignalDetailsWindow : FluentWindow
    {
       InitializeComponent();
 
-      DetailsGrid.ItemsSource = row.Signals.Select(signal => new SignalDetailRow(signal)).ToList();
+      var rows = row.Signals.Select(signal => new SignalDetailRow(signal)).ToList();
+      DetailsGrid.ItemsSource = rows;
       SummaryText.Text = string.Create(CultureInfo.CurrentCulture,
          $"Сигналів у записі: {row.Count} • медіана частоти: {row.MedianFrequencyMhz:F3} МГц");
+
+      Spectrum.ItemsSource = rows
+         .Select(r => new SpectrumPoint { FrequencyMhz = r.FrequencyMhz, SnrDb = r.SnrDb })
+         .ToList();
+      Spectrum.MedianFrequencyMhz = row.MedianFrequencyMhz;
 
       // запам'ятовуємо розмір/позицію вікна деталізації між відкриттями
       _ = new WindowPlacementBinder(this,
